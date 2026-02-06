@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       .where(eq(users.email, email));
 
     if (existedUser.length > 0) {
-      NextResponse.json(
+      return NextResponse.json(
         {
           message: "user is already existed",
           success: false,
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error(error);
-    NextResponse.json(
+    return NextResponse.json(
       { messahe: "Internal server error", success: false },
       { status: 500 },
     );

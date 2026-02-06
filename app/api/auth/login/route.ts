@@ -57,8 +57,14 @@ export async function POST(request: Request) {
       { expiresIn: "7d" },
     );
 
+    const filteredUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
     const response = NextResponse.json(
-      { message: "Login successful", success: true },
+      { message: "Login successful", user: filteredUser, success: true },
       { status: 200 },
     );
 

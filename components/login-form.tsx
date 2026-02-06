@@ -53,7 +53,10 @@ export function LoginForm({
       //   confirmPassword: "",
       //   role: "user"
       // })
+
       toast.success(response.message);
+      localStorage.setItem("token", JSON.stringify(response.user));
+
     } catch (error) {
       toast.error(`Something went wrong ${error}`);
     }
