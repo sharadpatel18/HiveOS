@@ -1,3 +1,4 @@
+import { ROLES } from "@/types/role";
 import { z } from "zod";
 
 export const companyValidation = z.object({
@@ -12,7 +13,7 @@ export const companyValidation = z.object({
 
 export const companyMembersValidation = z.object({
   companyId: z.string().nonempty("Company ID is required"),
-  role: z.enum(["user", "admin", "superadmin"]).nonoptional("Role is required"),
+  role: z.enum(ROLES).nonoptional("Role is required"),
 });
 
 export type Company = z.infer<typeof companyValidation>;

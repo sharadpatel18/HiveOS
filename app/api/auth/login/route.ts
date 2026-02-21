@@ -45,8 +45,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const payload = {
+      id: user.id,
+      fullName: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
     const accessToken = jwt.sign(
-      { id: user.id, email: user.email },
+      payload,
       process.env.JWT_ACCESS_SECRET as string,
       { expiresIn: "15m" },
     );
@@ -57,14 +64,8 @@ export async function POST(request: Request) {
       { expiresIn: "7d" },
     );
 
-    const filteredUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
     const response = NextResponse.json(
-      { message: "Login successful", user: filteredUser, success: true },
+      { message: "Login successful", success: true },
       { status: 200 },
     );
 

@@ -1,3 +1,4 @@
+import { ROLES } from "@/types/role";
 import { z } from "zod";
 
 export const signupValidation = z.object({
@@ -13,7 +14,7 @@ export const signupValidation = z.object({
       /[@$!%*?&]/,
       "Password must contain at least one special character (@ $ ! % * ? &)",
     ),
-  role: z.enum(["user", "admin", "superadmin"]).nonoptional("Role is required"),
+  role: z.enum(ROLES).nonoptional("Role is required"),
 });
 
 export const loginValidation = z.object({

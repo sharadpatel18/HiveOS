@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const auth = await withAuth(request);
     if ("error" in auth) return auth.error;
 
-    const { userId } = auth.user;
+    const { id: userId } = auth.user;
     const body = await request.json();
 
     const validateSchema = companyValidation.safeParse(body);
@@ -42,6 +42,21 @@ export async function POST(request: Request) {
       );
     }
 
+    const checkMultipleUserCompany = await db
+      .select()
+      .from(company)
+      .where(eq(company.userId, userId));
+
+    if (checkMultipleUserCompany.length > 0) {
+      return NextResponse.json(
+        {
+          message: "You already have a company",
+          success: false,
+        },
+        { status: 400 },
+      );
+    }
+
     const response = await db.insert(company).values({
       name,
       slug,
@@ -56,6 +71,31 @@ export async function POST(request: Request) {
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
     console.error(error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const auth = await withAuth(request);
+    if ("error" in auth) return auth.error;
+
+    const { id: userId } = auth.user;
+
+    if (!userId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const response = await db
+      .select()
+      .from(company)
+      .where(eq(company.userId, userId));
+
+    return NextResponse.json(response);
+  } catch (error) {
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },

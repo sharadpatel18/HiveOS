@@ -2,15 +2,18 @@ import { NextResponse } from "next/server";
 import { verifyToken } from "./auth";
 
 export async function withAuth(request: Request) {
-  const authHeader = request.headers.get("authorization");
+  const cookieHeader = request.headers.get("cookie") || "";
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const token = cookieHeader
+    .split("; ")
+    .find((c) => c.startsWith("accessToken="))
+    ?.split("=")[1];
+
+  if (!token) {
     return {
       error: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
     };
   }
-
-  const token = authHeader.split(" ")[1];
 
   try {
     const user = verifyToken(token);

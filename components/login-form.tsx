@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { loginUser } from "@/services/auth.services"
+import { getUserData, loginUser } from "@/services/auth-services"
 import Link from "next/link"
 
 export function LoginForm({
@@ -46,16 +46,13 @@ export function LoginForm({
     e.preventDefault();
     try {
       const response = await loginUser(formData);
-      // setFormData({
-      //   name: "",
-      //   email: "",
-      //   password: "",
-      //   confirmPassword: "",
-      //   role: "user"
-      // })
 
       toast.success(response.message);
-      localStorage.setItem("token", JSON.stringify(response.user));
+      const results = await getUserData();
+
+      if (results) {
+
+      }
 
     } catch (error) {
       toast.error(`Something went wrong ${error}`);

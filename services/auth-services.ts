@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import { AuthUser } from "@/types/user";
 
 interface User {
   name: string;
@@ -34,6 +35,22 @@ export const loginUser = async (data: LoginUser) => {
   try {
     const response = await axios.post("/api/auth/login", data);
     return response.data;
+  } catch (error) {
+    const err = error as AxiosError<ApiErrorResponse>;
+    if (err.response?.data?.message) {
+      throw new Error(err.response.data.message);
+    }
+    throw new Error("Something went wrong. Please try again.");
+  }
+};
+
+export const getUserData = async (): Promise<AuthUser> => {
+  try {
+    const response = await axios.get("/api/auth/me", {
+      withCredentials: true,
+    });
+
+    return response.data.user;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {

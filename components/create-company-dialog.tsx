@@ -13,6 +13,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from "@/components/ui/select"
+import { useAuthStore } from "@/store/auth-store"
 
 // helper to create slug
 const toSlug = (text: string) =>
@@ -27,30 +35,42 @@ export default function CreateCompanyDialog({
 }: {
     children: React.ReactNode
 }) {
+    const user = useAuthStore((state) => state.user)
+
     const [loading, setLoading] = useState(false)
+
+    const [formData, setFormData] = useState({
+        name: "",
+        description: "",
+        size: "",
+        founder: user?.fullName,
+        website: "",
+        industry: "",
+    })
+
+    function handleChange(
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value,
+        })
+    }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        const form = e.currentTarget
-        const formData = new FormData(form)
-
-        const name = formData.get("name") as string
-
         const payload = {
-            name,
-            slug: toSlug(name),
-            description: formData.get("description"),
-            size: formData.get("size"),
-            founder: formData.get("founder"),
-            website: formData.get("website") || null,
-            industry: formData.get("industry") || null,
+            ...formData,
+            slug: toSlug(formData.name),
+            website: formData.website || null,
+            industry: formData.industry || null,
         }
 
         try {
             setLoading(true)
 
-            const res = await fetch("/api/companies", {
+            const res = await fetch("/api/company", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -62,7 +82,6 @@ export default function CreateCompanyDialog({
                 throw new Error("Failed to create company")
             }
 
-            // optional: refresh or close dialog
             window.location.reload()
         } catch (err) {
             alert("Something went wrong")
@@ -86,21 +105,38 @@ export default function CreateCompanyDialog({
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                     <div className="space-y-1">
                         <Label>Company name</Label>
-                        <Input name="name" placeholder="Acme Inc." required />
+                        <Input
+                            name="name"
+                            placeholder="Acme Inc."
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                        />
                     </div>
 
                     <div className="space-y-1">
                         <Label>Founder name</Label>
-                        <Input name="founder" placeholder="John Doe" required />
+                        <Input value={formData.founder} readOnly />
                     </div>
 
                     <div className="space-y-1">
                         <Label>Company size</Label>
-                        <Input
-                            name="size"
-                            placeholder="1-10, 10-50, 50-200..."
-                            required
-                        />
+                        <Select
+                            onValueChange={(value) =>
+                                setFormData({ ...formData, size: value })
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select company size" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1-10">1–10</SelectItem>
+                                <SelectItem value="10-50">10–50</SelectItem>
+                                <SelectItem value="50-200">50–200</SelectItem>
+                                <SelectItem value="200-500">200–500</SelectItem>
+                                <SelectItem value="500+">500+</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="space-y-1">
@@ -108,6 +144,8 @@ export default function CreateCompanyDialog({
                         <Input
                             name="website"
                             placeholder="https://example.com"
+                            value={formData.website}
+                            onChange={handleChange}
                         />
                     </div>
 
@@ -116,6 +154,8 @@ export default function CreateCompanyDialog({
                         <Input
                             name="industry"
                             placeholder="Software, Finance, Healthcare"
+                            value={formData.industry}
+                            onChange={handleChange}
                         />
                     </div>
 
@@ -125,11 +165,17 @@ export default function CreateCompanyDialog({
                             name="description"
                             placeholder="What does your company do?"
                             rows={4}
+                            value={formData.description}
+                            onChange={handleChange}
                             required
                         />
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={loading}>
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={loading || !formData.size}
+                    >
                         {loading ? "Creating..." : "Create company"}
                     </Button>
                 </form>

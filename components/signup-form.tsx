@@ -15,7 +15,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { createUser } from "@/services/auth.services";
+import { createUser } from "@/services/auth-services";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user",
+    role: "USER",
   });
 
   useEffect(() => {

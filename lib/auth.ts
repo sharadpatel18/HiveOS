@@ -1,15 +1,17 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET!;
 
 export type JwtPayload = {
-  userId: string;
+  id: string;
+  fullName: string;
   email: string;
+  role: "USER" | "RECRUITER" | "FOUNDER";
 };
 
 export function verifyToken(token: string): JwtPayload {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+    return jwt.verify(token, JWT_ACCESS_SECRET) as JwtPayload;
   } catch {
     throw new Error("Invalid token");
   }
