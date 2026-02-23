@@ -89,20 +89,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const checkMultipleUserCompany = await db
-      .select()
-      .from(company)
-      .where(eq(company.userId, userId));
+    // const checkMultipleUserCompany = await db
+    //   .select()
+    //   .from(company)
+    //   .where(eq(company.userId, userId));
 
-    if (checkMultipleUserCompany.length === 0) {
-      return NextResponse.json(
-        {
-          message: "You don't have a company",
-          success: false,
-        },
-        { status: 400 },
-      );
-    }
+    // if (checkMultipleUserCompany.length === 0) {
+    //   return NextResponse.json(
+    //     {
+    //       message: "You don't have a company",
+    //       success: false,
+    //     },
+    //     { status: 400 },
+    //   );
+    // }
 
     const response = await db
       .select()
