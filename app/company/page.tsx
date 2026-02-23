@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import CreateCompanyDialog from "@/components/create-company-dialog"
 import { getCompanyByUserId } from "@/services/company-service"
+import { useCompanyStore } from "@/store/company-store"
+import { useCompany } from "@/hooks/use-company"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -55,19 +57,6 @@ type Company = {
     userId: string
     createdAt: string
     updatedAt: string
-}
-
-// ─── API call ─────────────────────────────────────────────────────────────────
-
-async function fetchCompany(): Promise<Company | null> {
-    try {
-        const res = await fetch("/api/company")
-        if (!res.ok) return null
-        const data = await res.json()
-        return data.company ?? null
-    } catch {
-        return null
-    }
 }
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
@@ -439,21 +428,7 @@ function CompanyDashboard({ company }: { company: Company }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CompanyPage() {
-    const [company, setCompany] = useState<Company | null>(null)
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        const getData = async () => {
-            const res = await getCompanyByUserId();
-
-            console.log(res[0]);
-
-            setCompany(res[0]);
-            setLoading(false);
-        }
-
-        getData();
-    }, [])
+    const { data: company, isLoading } = useCompany();
 
     return (
         <SidebarProvider
@@ -469,7 +444,7 @@ export default function CompanyPage() {
                 <SiteHeader />
                 <div className="flex flex-1 flex-col">
                     <div className="@container/main flex flex-1 flex-col">
-                        {loading ? (
+                        {isLoading ? (
                             <CompanyLoadingSkeleton />
                         ) : company ? (
                             <CompanyDashboard company={company} />

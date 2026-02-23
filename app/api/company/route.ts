@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       userId,
     });
 
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json({ message: "Success" }, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -87,6 +87,21 @@ export async function GET(request: Request) {
 
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const checkMultipleUserCompany = await db
+      .select()
+      .from(company)
+      .where(eq(company.userId, userId));
+
+    if (checkMultipleUserCompany.length === 0) {
+      return NextResponse.json(
+        {
+          message: "You don't have a company",
+          success: false,
+        },
+        { status: 400 },
+      );
     }
 
     const response = await db

@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
-import { Company, ICompany } from "@/types/company";
+import { ICompany } from "@/types/company";
+import { useCompanyStore } from "@/store/company-store";
 
 interface ApiErrorResponse {
   message: string;
@@ -8,8 +9,19 @@ interface ApiErrorResponse {
 
 export const getCompanyByUserId = async () => {
   try {
+    // const { company, setCompany } = useCompanyStore.getState();
+
+    // if (company) {
+    //   console.log("API IS NOT CALL");
+    //   return company;
+    // }
+
+    // console.log("yes it's true -------------");
     const response = await axios.get("/api/company");
-    return response.data;
+    // setCompany(response.data[0]);
+    console.log("API IS CALL");
+
+    return response.data[0];
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
