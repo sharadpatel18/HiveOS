@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useCompany } from "@/hooks/use-company"
+import { ModeToggle } from "./theme-button"
 
 export function SiteHeader() {
   const { data: company, isLoading } = useCompany()
@@ -53,8 +54,11 @@ export function SiteHeader() {
               GitHub
             </a>
           </Button>
-
+          <div className="mx-2">
+            <ModeToggle />
+          </div>
           {renderCompanyAction()}
+
         </div>
       </div>
     </header>
