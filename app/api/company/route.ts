@@ -1,7 +1,11 @@
 import db from "@/db";
+import { companyMembers, users } from "@/db/schemas";
 import { company } from "@/db/schemas/company";
 import { withAuth } from "@/lib/withAuth";
-import { companyValidation } from "@/validations/company.validation";
+import {
+  companyMembersValidation,
+  companyValidation,
+} from "@/validations/company.validation";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -57,16 +61,46 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await db.insert(company).values({
-      name,
-      slug,
-      description,
-      size,
-      founder,
-      website,
-      industry,
-      userId,
-    });
+    const response = await db
+      .insert(company)
+      .values({
+        name,
+        slug,
+        description,
+        size,
+        founder,
+        website,
+        industry,
+        userId,
+      })
+      .returning();
+
+    const updateUserRole = await db
+      .update(users)
+      .set({ role: "FOUNDER" })
+      .where(eq(users.id, userId));
+
+    const payload = {
+      userId: userId,
+      companyId: response[0].id,
+      role: "FOUNDER",
+      hiredBy: userId,
+    };
+
+    const validateCompanyMember = companyMembersValidation.safeParse(payload);
+    if (!validateCompanyMember.data) {
+      return NextResponse.json(
+        {
+          message: validateCompanyMember.error.issues[0].message,
+          success: false,
+        },
+        { status: 400 },
+      );
+    }
+
+    const companyMember = await db
+      .insert(companyMembers)
+      .values(validateCompanyMember.data);
 
     return NextResponse.json({ message: "Success" }, { status: 201 });
   } catch (error) {

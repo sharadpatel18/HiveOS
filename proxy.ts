@@ -14,13 +14,13 @@ const REFRESH_SECRET = new TextEncoder().encode(
 // ─── Routes ───────────────────────────────────────────────────────────────────
 const PUBLIC_ROUTES = [
   "/login",
-  "/register",
+  "/signup",
   "/forgot-password",
   "/reset-password",
 ];
 const AUTH_ONLY_ROUTES = [
   "/login",
-  "/register",
+  "/signup",
   "/forgot-password",
   "/reset-password",
 ];
@@ -39,13 +39,13 @@ function isAuthOnlyRoute(pathname: string) {
 
 function redirectToLoginHard(request: NextRequest) {
   const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+  const fullPath = request.nextUrl.pathname + request.nextUrl.search;
+  loginUrl.searchParams.set("redirect", fullPath);
   const response = NextResponse.redirect(loginUrl);
   response.cookies.delete(ACCESS_TOKEN_COOKIE);
   response.cookies.delete(REFRESH_TOKEN_COOKIE);
   return response;
 }
-
 // ─── Verify a token directly — no fetch, no network call ─────────────────────
 async function verifyToken(token: string, secret: Uint8Array) {
   try {

@@ -20,6 +20,9 @@ export const companyMembers = pgTable(
       .notNull()
       .references(() => company.id, { onDelete: "cascade" }),
     role: text("role").notNull(),
+    hiredBy: uuid("hired_by")
+      .notNull()
+      .references(() => users.id),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

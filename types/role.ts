@@ -9,6 +9,7 @@ export const ROLES = {
   USER: "USER",
   RECRUITER: "RECRUITER",
   FOUNDER: "FOUNDER",
+  EMPLOYEE: "EMPLOYEE",
   SUPERADMIN: "SUPERADMIN",
 } as const;
 
@@ -23,9 +24,10 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
  */
 export const ROLE_HIERARCHY: Record<Role, number> = {
   USER: 1,
-  RECRUITER: 2,
-  FOUNDER: 3,
-  SUPERADMIN: 4,
+  EMPLOYEE: 2,
+  RECRUITER: 3,
+  FOUNDER: 4,
+  SUPERADMIN: 5,
 };
 
 /**
@@ -39,6 +41,7 @@ export const ROLE_GROUPS = {
   // Hiring
   CAN_POST_JOBS: [ROLES.RECRUITER, ROLES.FOUNDER],
   CAN_INVITE_RECRUITERS: [ROLES.FOUNDER],
+  CAN_INVITE_EMPLOYEES: [ROLES.FOUNDER, ROLES.RECRUITER],
 
   // System-level
   CAN_ACCESS_SYSTEM: [ROLES.SUPERADMIN],

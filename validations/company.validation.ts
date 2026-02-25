@@ -12,8 +12,22 @@ export const companyValidation = z.object({
 });
 
 export const companyMembersValidation = z.object({
+  userId: z.string().nonempty("User ID is required"),
   companyId: z.string().nonempty("Company ID is required"),
   role: z.enum(ROLES).nonoptional("Role is required"),
+  hiredBy: z.string().nonempty("hiredBy is required"),
+});
+
+export const companyInvitesValidation = z.object({
+  companyId: z.string().nonempty("Company ID is required"),
+  email: z.string().email().nonempty("Email is required"),
+  role: z.enum(ROLES).nonoptional("Role is required"),
+});
+
+export const companyJoinValidation = z.object({
+  token: z.string().nonempty("Token is required"),
+  role: z.enum(ROLES).nonoptional("Role is required"),
+  id: z.string().nonempty("ID is required"),
 });
 
 export type Company = z.infer<typeof companyValidation>;

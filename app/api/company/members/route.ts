@@ -1,5 +1,5 @@
 import db from "@/db";
-import { companyMembers } from "@/db/schemas/company_members";
+import { companyMembers } from "@/db/schemas/company-members";
 import { withAuth } from "@/lib/withAuth";
 import { companyMembersValidation } from "@/validations/company.validation";
 import { eq } from "drizzle-orm";
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const auth = await withAuth(request);
     if ("error" in auth) return auth.error;
 
-    const { userId } = auth.user;
+    const { id: userId } = auth.user;
     const body = await request.json();
 
     const validateSchema = companyMembersValidation.safeParse(body);
@@ -39,9 +39,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const { companyId, role } = validateSchema.data;
+    const { companyId, role, hiredBy } = validateSchema.data;
 
-    await db.insert(companyMembers).values({ userId, companyId, role });
+    await db
+      .insert(companyMembers)
+      .values({ userId, companyId, role, hiredBy });
 
     return NextResponse.json({ message: "Success", success: true });
   } catch (error) {
@@ -52,3 +54,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

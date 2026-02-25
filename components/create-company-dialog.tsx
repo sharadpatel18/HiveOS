@@ -21,6 +21,8 @@ import {
     SelectItem,
 } from "@/components/ui/select"
 import { useAuthStore } from "@/store/auth-store"
+import { createCompany } from "@/services/company-service"
+import { ICompany } from "@/types/company"
 
 // helper to create slug
 const toSlug = (text: string) =>
@@ -36,7 +38,7 @@ export default function CreateCompanyDialog({
     children: React.ReactNode
 }) {
     const user = useAuthStore((state) => state.user)
-
+    console.log(user)
     const [loading, setLoading] = useState(false)
 
     const [formData, setFormData] = useState({
@@ -60,31 +62,22 @@ export default function CreateCompanyDialog({
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        const payload = {
+        const payload: ICompany = {
             ...formData,
             slug: toSlug(formData.name),
             website: formData.website || null,
             industry: formData.industry || null,
+            founder: user?.fullName || "",
         }
 
         try {
             setLoading(true)
 
-            const res = await fetch("/api/company", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-            })
+            const res = await createCompany(payload);
 
-            if (!res.ok) {
-                throw new Error("Failed to create company")
-            }
-
-            window.location.reload()
+            console.log(res)
         } catch (err) {
-            alert("Something went wrong")
+            console.error(err)
         } finally {
             setLoading(false)
         }

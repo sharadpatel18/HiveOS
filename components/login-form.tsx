@@ -19,12 +19,17 @@ import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { getUserData, loginUser } from "@/services/auth-services"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const redirect = searchParams.get("redirect")
+  const token = searchParams.get("token")
   const [isMounted, setIsMounted] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -51,7 +56,11 @@ export function LoginForm({
       const results = await getUserData();
 
       if (results) {
-
+        if (redirect) {
+          router.push(redirect);
+        } else {
+          router.push("/dashboard");
+        }
       }
 
     } catch (error) {
