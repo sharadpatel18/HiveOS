@@ -31,32 +31,26 @@ export async function POST(request: Request) {
     const { name, slug, description, size, founder, website, industry } =
       validateSchema.data;
 
-    const doublicateSlug = await db
+    const duplicateSlug = await db
       .select()
       .from(company)
       .where(eq(company.slug, slug));
 
-    if (doublicateSlug.length > 0) {
+    if (duplicateSlug.length > 0) {
       return NextResponse.json(
-        {
-          message: "Slug is already existed",
-          success: false,
-        },
+        { message: "Slug is already existed", success: false },
         { status: 400 },
       );
     }
 
-    const checkMultipleUserCompany = await db
+    const existingCompany = await db
       .select()
       .from(company)
       .where(eq(company.userId, userId));
 
-    if (checkMultipleUserCompany.length > 0) {
+    if (existingCompany.length > 0) {
       return NextResponse.json(
-        {
-          message: "You already have a company",
-          success: false,
-        },
+        { message: "You already have a company", success: false },
         { status: 400 },
       );
     }
@@ -75,13 +69,10 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    const updateUserRole = await db
-      .update(users)
-      .set({ role: "FOUNDER" })
-      .where(eq(users.id, userId));
+    await db.update(users).set({ role: "FOUNDER" }).where(eq(users.id, userId));
 
     const payload = {
-      userId: userId,
+      userId,
       companyId: response[0].id,
       role: "FOUNDER",
       hiredBy: userId,
@@ -98,9 +89,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const companyMember = await db
-      .insert(companyMembers)
-      .values(validateCompanyMember.data);
+    await db.insert(companyMembers).values(validateCompanyMember.data);
 
     return NextResponse.json({ message: "Success" }, { status: 201 });
   } catch (error) {
@@ -119,32 +108,39 @@ export async function GET(request: Request) {
 
     const { id: userId } = auth.user;
 
-    if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Find the company where this user is a member (any role)
+    // companyMembers links userId → companyId, so we join company on that
+    const result = await db
+      .select({
+        // Company fields
+        id: company.id,
+        name: company.name,
+        slug: company.slug,
+        description: company.description,
+        size: company.size,
+        founder: company.founder,
+        website: company.website,
+        industry: company.industry,
+        isActive: company.isActive,
+        userId: company.userId,
+        createdAt: company.createdAt,
+        updatedAt: company.updatedAt,
+        // Member's role in this company
+        memberRole: companyMembers.role,
+      })
+      .from(companyMembers)
+      .innerJoin(company, eq(company.id, companyMembers.companyId)) // ✅ correct join
+      .where(eq(companyMembers.userId, userId)) // ✅ filter by logged-in user
+      .limit(1); // one company per user for now
+
+    if (result.length === 0) {
+      return NextResponse.json(null, { status: 200 });
+      // returning null (not 404) so the frontend can show the "create company" state
     }
 
-    // const checkMultipleUserCompany = await db
-    //   .select()
-    //   .from(company)
-    //   .where(eq(company.userId, userId));
-
-    // if (checkMultipleUserCompany.length === 0) {
-    //   return NextResponse.json(
-    //     {
-    //       message: "You don't have a company",
-    //       success: false,
-    //     },
-    //     { status: 400 },
-    //   );
-    // }
-
-    const response = await db
-      .select()
-      .from(company)
-      .where(eq(company.userId, userId));
-
-    return NextResponse.json(response);
+    return NextResponse.json(result[0], { status: 200 });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },

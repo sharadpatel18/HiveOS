@@ -1,48 +1,27 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-    Building2,
-    Users,
-    Briefcase,
-    FileText,
-    TrendingUp,
-    Sparkles,
-    Zap,
-    Shield,
-    ArrowRight,
-    CheckCircle2,
-    Globe,
-    Factory,
-    UserCircle,
-    Calendar,
-    ExternalLink,
-    Settings,
-    MoreHorizontal,
-    Activity,
-    BadgeCheck,
-    PlusCircle,
-    UserPlus,
-    ClipboardList,
-    ChevronRight,
+    Building2, Users, Briefcase, FileText, TrendingUp,
+    Sparkles, Shield, ArrowRight, CheckCircle2, Globe,
+    Factory, UserCircle, Calendar, ExternalLink, Settings,
+    MoreHorizontal, Activity, BadgeCheck, PlusCircle,
+    UserPlus, ClipboardList, ChevronRight, Crown, User,
+    XCircle, Link2,
 } from "lucide-react"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+    DropdownMenu, DropdownMenuContent,
+    DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import CreateCompanyDialog from "@/components/create-company-dialog"
 import { useCompany } from "@/hooks/use-company"
+import { useAuthStore } from "@/store/auth-store"
 import Link from "next/link"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -60,32 +39,103 @@ type Company = {
     userId: string
     createdAt: string
     updatedAt: string
+    memberRole: string
+}
+
+type UserRole = "FOUNDER" | "RECRUITER" | "EMPLOYEE" | "USER"
+
+// ─── Role Config ──────────────────────────────────────────────────────────────
+
+const ROLE_CONFIG: Record<string, {
+    label: string
+    badgeClass: string
+    stripClass: string
+    dotClass: string
+    icon: React.ElementType
+    description: string
+}> = {
+    FOUNDER: {
+        label: "Founder",
+        badgeClass: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+        stripClass: "bg-violet-500",
+        dotClass: "bg-violet-500",
+        icon: Crown,
+        description: "Full access — manage everything",
+    },
+    RECRUITER: {
+        label: "Recruiter",
+        badgeClass: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+        stripClass: "bg-blue-500",
+        dotClass: "bg-blue-500",
+        icon: UserPlus,
+        description: "Invite employees & review applications",
+    },
+    EMPLOYEE: {
+        label: "Employee",
+        badgeClass: "text-slate-400 bg-slate-500/10 border-slate-500/20",
+        stripClass: "bg-slate-500",
+        dotClass: "bg-slate-500",
+        icon: User,
+        description: "View-only access to company details",
+    },
+    USER: {
+        label: "Viewer",
+        badgeClass: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20",
+        stripClass: "bg-zinc-500",
+        dotClass: "bg-zinc-500",
+        icon: User,
+        description: "Public viewer",
+    },
+}
+
+// ─── Permissions ──────────────────────────────────────────────────────────────
+
+function usePermissions(company: Company | null | undefined) {
+    const user = useAuthStore((s) => s.user)
+    const rawRole = (company?.memberRole ?? user?.role ?? "USER").toUpperCase() as UserRole
+    const isFounder = rawRole === "FOUNDER" || company?.userId === user?.id
+    const isRecruiter = !isFounder && rawRole === "RECRUITER"
+    const isEmployee = !isFounder && !isRecruiter && rawRole === "EMPLOYEE"
+    const effectiveRole: UserRole = isFounder ? "FOUNDER" : isRecruiter ? "RECRUITER" : isEmployee ? "EMPLOYEE" : "USER"
+
+    return {
+        role: effectiveRole,
+        roleConfig: ROLE_CONFIG[effectiveRole] ?? ROLE_CONFIG.USER,
+        isFounder, isRecruiter, isEmployee,
+        canPostJob: isFounder,
+        canInviteRecruiter: isFounder,
+        canInviteEmployee: isFounder || isRecruiter,
+        canViewApplications: isFounder || isRecruiter,
+        canManageSettings: isFounder,
+        canEditCompany: isFounder,
+        canManageRecruiters: isFounder,
+    }
 }
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 
 function CompanyLoadingSkeleton() {
     return (
-        <div className="mx-auto max-w-5xl px-6 py-10 space-y-8 w-full">
-            <div className="flex items-start gap-6">
-                <Skeleton className="h-20 w-20 rounded-2xl" />
-                <div className="flex-1 space-y-3">
-                    <Skeleton className="h-8 w-64" />
-                    <Skeleton className="h-4 w-96" />
-                    <div className="flex gap-2">
-                        <Skeleton className="h-6 w-20 rounded-full" />
-                        <Skeleton className="h-6 w-24 rounded-full" />
-                    </div>
+        <div className="mx-auto max-w-5xl w-full px-6 py-8 space-y-5">
+            <div className="flex items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-3.5 w-64" />
                 </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-4">
-                {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-28 rounded-xl" />
-                ))}
+            <div className="grid grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}
             </div>
-            <div className="grid gap-6 lg:grid-cols-3">
-                <Skeleton className="h-80 rounded-xl lg:col-span-2" />
-                <Skeleton className="h-80 rounded-xl" />
+            <div className="grid grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
+            </div>
+            <div className="grid lg:grid-cols-3 gap-4">
+                <Skeleton className="h-56 rounded-xl lg:col-span-2" />
+                <div className="space-y-3">
+                    <Skeleton className="h-20 rounded-xl" />
+                    <Skeleton className="h-36 rounded-xl" />
+                </div>
             </div>
         </div>
     )
@@ -95,48 +145,64 @@ function CompanyLoadingSkeleton() {
 
 function NoCompanyState() {
     return (
-        <div className="mx-auto max-w-5xl px-6 py-16 space-y-12 w-full">
-            <div className="text-center space-y-5">
-                <div className="mx-auto h-20 w-20 rounded-2xl border-2 border-dashed border-primary/40 flex items-center justify-center bg-primary/5">
-                    <Building2 className="h-10 w-10 text-primary" />
-                </div>
-                <div className="space-y-2">
-                    <Badge variant="secondary" className="gap-1.5 px-3 py-1">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Get Started
-                    </Badge>
-                    <h1 className="text-4xl font-bold tracking-tight">
-                        Create your company workspace
-                    </h1>
-                    <p className="text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                        Manage recruiters, post jobs, and control everything related to your
-                        organization from one centralized platform.
-                    </p>
-                </div>
-                <CreateCompanyDialog>
-                    <Button size="lg" className="gap-2 px-8">
-                        Create company
-                        <ArrowRight className="h-4 w-4" />
-                    </Button>
-                </CreateCompanyDialog>
+        <div className="mx-auto max-w-lg px-6 py-24 text-center space-y-6 w-full">
+            <div className="mx-auto h-14 w-14 rounded-2xl border border-dashed border-primary/30 flex items-center justify-center bg-primary/5">
+                <Building2 className="h-7 w-7 text-primary/60" />
             </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+                <Badge variant="secondary" className="gap-1.5 px-3 py-0.5 text-xs mb-1">
+                    <Sparkles className="h-3 w-3" /> Get Started
+                </Badge>
+                <h1 className="text-2xl font-bold tracking-tight">Create your company</h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                    Manage recruiters, post jobs, and control your organization from one place.
+                </p>
+            </div>
+            <CreateCompanyDialog>
+                <Button size="sm" className="gap-2 px-6">
+                    Create company <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+            </CreateCompanyDialog>
+            <div className="grid gap-2 sm:grid-cols-3 pt-2">
                 {[
-                    { icon: Shield, text: "Secure & Private", desc: "Enterprise-grade security" },
-                    { icon: Users, text: "Team Collaboration", desc: "Invite and manage recruiters" },
-                    { icon: TrendingUp, text: "Analytics", desc: "Track hiring performance" },
+                    { icon: Shield, text: "Secure", desc: "Enterprise security" },
+                    { icon: Users, text: "Team", desc: "Invite & manage" },
+                    { icon: TrendingUp, text: "Analytics", desc: "Track performance" },
                 ].map((f, i) => (
-                    <div key={i} className="flex items-center gap-3 p-4 rounded-xl border bg-card">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <f.icon className="h-5 w-5 text-primary" />
+                    <div key={i} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border bg-card text-center">
+                        <div className="h-8 w-8 rounded-lg bg-primary/8 flex items-center justify-center">
+                            <f.icon className="h-3.5 w-3.5 text-primary" />
                         </div>
-                        <div>
-                            <p className="font-semibold text-sm">{f.text}</p>
-                            <p className="text-xs text-muted-foreground">{f.desc}</p>
-                        </div>
+                        <p className="font-semibold text-xs">{f.text}</p>
+                        <p className="text-[11px] text-muted-foreground">{f.desc}</p>
                     </div>
                 ))}
+            </div>
+        </div>
+    )
+}
+
+// ─── Stat Card — fixed layout ─────────────────────────────────────────────────
+
+function StatCard({ label, value, icon: Icon, iconBg, iconColor }: {
+    label: string; value: number
+    icon: React.ElementType; iconBg: string; iconColor: string
+}) {
+    return (
+        <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
+            {/* top row: label + icon */}
+            <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                <div className={`h-7 w-7 rounded-lg ${iconBg} flex items-center justify-center`}>
+                    <Icon className={`h-3.5 w-3.5 ${iconColor}`} />
+                </div>
+            </div>
+            {/* bottom: value */}
+            <div>
+                <p className="text-2xl font-bold tracking-tight leading-none">{value}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                    {value === 0 ? "No data yet" : "Total"}
+                </p>
             </div>
         </div>
     )
@@ -145,343 +211,365 @@ function NoCompanyState() {
 // ─── Quick Action Button ──────────────────────────────────────────────────────
 
 function QuickActionButton({
-    icon: Icon,
-    label,
-    company,
-    description,
-    variant = "outline",
-    accent,
+    icon: Icon, label, href, description,
+    variant = "outline", accent,
+    disabled = false, disabledReason,
 }: {
-    icon: React.ElementType
-    label: string
-    description: string
-    company: Company
-    variant?: "default" | "outline"
-    accent?: string
+    icon: React.ElementType; label: string; description: string; href: string
+    variant?: "default" | "outline"; accent?: string
+    disabled?: boolean; disabledReason?: string
 }) {
-    return (
-        <Link
-            href={`/company/${company.id}/members`}
-            className={`
-                group w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left
-                transition-all duration-200
-                ${variant === "default"
-                    ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5"
-                    : "border-border bg-card hover:border-primary/40 hover:bg-accent/40 hover:-translate-y-0.5 hover:shadow-md"
-                }
-            `}
+    const inner = (
+        <div
+            title={disabled ? disabledReason : undefined}
+            className={[
+                "group flex items-center gap-3 p-3 rounded-xl border transition-all duration-150 text-left w-full",
+                disabled
+                    ? "border-border/50 bg-muted/20 opacity-40 cursor-not-allowed"
+                    : variant === "default"
+                        ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md hover:shadow-primary/20 hover:-translate-y-px cursor-pointer"
+                        : "border-border bg-card hover:border-primary/25 hover:bg-accent/40 hover:-translate-y-px hover:shadow-sm cursor-pointer"
+            ].join(" ")}
         >
-            <div className={`
-                h-10 w-10 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110
-                ${variant === "default" ? "bg-primary-foreground/20" : accent ?? "bg-muted"}
-            `}>
-                <Icon className={`h-5 w-5 ${variant === "default" ? "text-primary-foreground" : "text-foreground"}`} />
+            <div className={[
+                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                disabled ? "bg-muted" : variant === "default" ? "bg-white/15" : accent ?? "bg-muted",
+            ].join(" ")}>
+                <Icon className={`h-4 w-4 ${disabled ? "text-muted-foreground" : variant === "default" ? "text-primary-foreground" : "text-foreground"}`} />
             </div>
             <div className="flex-1 min-w-0">
-                <p className={`font-semibold text-sm ${variant === "default" ? "text-primary-foreground" : "text-foreground"}`}>
+                <p className={`font-semibold text-xs leading-tight ${disabled ? "text-muted-foreground" : variant === "default" ? "text-primary-foreground" : "text-foreground"}`}>
                     {label}
                 </p>
-                <p className={`text-xs mt-0.5 truncate ${variant === "default" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                    {description}
+                <p className={`text-[11px] mt-0.5 truncate ${disabled ? "text-muted-foreground/50" : variant === "default" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    {disabled ? (disabledReason ?? description) : description}
                 </p>
             </div>
-            <ChevronRight className={`h-4 w-4 shrink-0 opacity-50 group-hover:opacity-100 transition-all group-hover:translate-x-0.5 ${variant === "default" ? "text-primary-foreground" : ""}`} />
-        </Link>
+            {!disabled && (
+                <ChevronRight className={`h-3.5 w-3.5 shrink-0 opacity-30 group-hover:opacity-70 group-hover:translate-x-0.5 transition-all ${variant === "default" ? "text-primary-foreground" : ""}`} />
+            )}
+        </div>
     )
+    return disabled ? inner : <Link href={href}>{inner}</Link>
 }
 
 // ─── Company Dashboard ────────────────────────────────────────────────────────
 
 function CompanyDashboard({ company }: { company: Company }) {
-    const initials = company.name
-        .split(" ")
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
+    const perms = usePermissions(company)
+    const user = useAuthStore((s) => s.user)
 
-    const createdDate = new Date(company.createdAt).toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-    })
+    const companyInitials = company.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
+    const userInitials = user?.fullName
+        ? user.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+        : user?.email?.[0]?.toUpperCase() ?? "U"
+
+    const createdDate = new Date(company.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+
+    const { roleConfig } = perms
+    const RoleIcon = roleConfig.icon
 
     const stats = [
+        { label: "Recruiters", value: 0, icon: Users, iconBg: "bg-blue-500/10", iconColor: "text-blue-400" },
+        { label: "Jobs Posted", value: 0, icon: Briefcase, iconBg: "bg-violet-500/10", iconColor: "text-violet-400" },
+        { label: "Applications", value: 0, icon: FileText, iconBg: "bg-emerald-500/10", iconColor: "text-emerald-400" },
+        { label: "Activity", value: 0, icon: TrendingUp, iconBg: "bg-orange-500/10", iconColor: "text-orange-400" },
+    ]
+
+    const quickActions = [
         {
-            label: "Recruiters",
-            value: 0,
-            icon: Users,
-            iconBg: "bg-blue-500/10",
-            iconColor: "text-blue-500",
+            icon: PlusCircle, label: "Post a Job", description: "New listing",
+            href: `/company/${company.id}/jobs/new`, variant: "default" as const,
+            disabled: !perms.canPostJob, disabledReason: "Founders only",
         },
         {
-            label: "Jobs Posted",
-            value: 0,
-            icon: Briefcase,
-            iconBg: "bg-violet-500/10",
-            iconColor: "text-violet-500",
+            icon: UserPlus,
+            label: perms.isFounder ? "Invite Member" : "Invite Employee",
+            description: perms.isFounder ? "Recruiter or employee" : "Add an employee",
+            href: `/company/${company.id}/members/invite`, accent: "bg-violet-500/10",
+            disabled: !perms.canInviteEmployee, disabledReason: "No invite access",
         },
         {
-            label: "Applications",
-            value: 0,
-            icon: FileText,
-            iconBg: "bg-emerald-500/10",
-            iconColor: "text-emerald-500",
+            icon: ClipboardList, label: "Applications", description: "Review candidates",
+            href: `/company/${company.id}/applications`, accent: "bg-emerald-500/10",
+            disabled: !perms.canViewApplications, disabledReason: "No access",
         },
         {
-            label: "Activity",
-            value: 0,
-            icon: TrendingUp,
-            iconBg: "bg-orange-500/10",
-            iconColor: "text-orange-500",
+            icon: Settings, label: "Settings", description: "Manage company",
+            href: `/company/${company.id}/settings`, accent: "bg-slate-500/10",
+            disabled: !perms.canManageSettings, disabledReason: "Founders only",
         },
     ]
 
-    const companyDetails = [
-        { label: "Founder", value: company.founder || "Not specified", icon: UserCircle },
-        { label: "Company Size", value: company.size || "Not specified", icon: Users },
-        { label: "Industry", value: company.industry || "Not specified", icon: Factory },
-        {
-            label: "Website",
-            value: company.website || "Not specified",
-            icon: Globe,
-            isLink: !!company.website,
-        },
-        { label: "Slug", value: `/${company.slug}`, icon: Activity },
+    // Company details — only rows with actual data
+    const companyDetails: { label: string; value: string; icon: React.ElementType; isLink?: boolean }[] = [
+        { label: "Founder", value: company.founder || "—", icon: UserCircle },
+        { label: "Size", value: company.size || "—", icon: Users },
+        { label: "Industry", value: company.industry || "—", icon: Factory },
+        ...(company.website ? [{ label: "Website", value: company.website, icon: Globe, isLink: true }] : []),
+        { label: "Slug", value: `/${company.slug}`, icon: Link2 },
+    ]
+
+    const permissions = [
+        { label: "Post jobs", allowed: perms.canPostJob },
+        { label: "Invite recruiters", allowed: perms.canInviteRecruiter },
+        { label: "Invite employees", allowed: perms.canInviteEmployee },
+        { label: "View applications", allowed: perms.canViewApplications },
+        { label: "Company settings", allowed: perms.canManageSettings },
     ]
 
     return (
-        <div className="mx-auto max-w-5xl px-6 py-10 space-y-8 w-full">
+        <div className="mx-auto max-w-5xl px-6 py-8 space-y-5 w-full">
 
-            {/* ── Company Header ── */}
+            {/* ── Header ─────────────────────────────────────────────────── */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-5">
-                    <Avatar className="h-20 w-20 rounded-2xl border-2 border-border shadow-sm shrink-0">
-                        <AvatarFallback className="rounded-2xl text-2xl font-bold bg-muted text-foreground">
-                            {initials}
+                <div className="flex items-center gap-3.5">
+                    <Avatar className="h-12 w-12 rounded-xl border border-border shadow-sm shrink-0">
+                        <AvatarFallback className="rounded-xl text-base font-bold bg-muted text-foreground">
+                            {companyInitials}
                         </AvatarFallback>
                     </Avatar>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                            <h1 className="text-3xl font-bold tracking-tight">{company.name}</h1>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-lg font-bold tracking-tight">{company.name}</h1>
                             {company.isActive && (
-                                <Badge className="gap-1 text-emerald-700 bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/15">
-                                    <BadgeCheck className="h-3.5 w-3.5" />
-                                    Active
+                                <Badge className="gap-1 text-[11px] h-5 px-1.5 text-emerald-400 bg-emerald-500/10 border-emerald-500/20 font-medium">
+                                    <BadgeCheck className="h-2.5 w-2.5" /> Active
                                 </Badge>
                             )}
+                            <Badge className={`gap-1 text-[11px] h-5 px-1.5 font-medium ${roleConfig.badgeClass}`}>
+                                <RoleIcon className="h-2.5 w-2.5" /> {roleConfig.label}
+                            </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
+                        <p className="text-xs text-muted-foreground max-w-lg line-clamp-1">
                             {company.description || "No description provided."}
                         </p>
-                        <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
                             {company.industry && (
-                                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <Factory className="h-3.5 w-3.5" />
-                                    {company.industry}
+                                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                    <Factory className="h-2.5 w-2.5" />{company.industry}
                                 </span>
                             )}
-                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Users className="h-3.5 w-3.5" />
-                                {company.size} employees
+                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <Users className="h-2.5 w-2.5" />{company.size} employees
                             </span>
-                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Calendar className="h-3.5 w-3.5" />
-                                Founded {createdDate}
+                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <Calendar className="h-2.5 w-2.5" />Since {createdDate}
                             </span>
                         </div>
                     </div>
                 </div>
-
                 <div className="flex items-center gap-2 shrink-0">
                     {company.website && (
-                        <Button variant="outline" size="sm" asChild>
-                            <a href={company.website} target="_blank" rel="noopener noreferrer" className="gap-1.5">
-                                <Globe className="h-4 w-4" />
-                                Website
-                                <ExternalLink className="h-3 w-3 opacity-60" />
+                        <Button variant="outline" size="sm" asChild className="h-7 text-xs gap-1.5 px-3">
+                            <a href={company.website} target="_blank" rel="noopener noreferrer">
+                                <Globe className="h-3 w-3" /> Website
+                                <ExternalLink className="h-2.5 w-2.5 opacity-50" />
                             </a>
                         </Button>
                     )}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2">
-                                <Settings className="h-4 w-4" />
-                                Edit Company
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
-                                <UserCircle className="h-4 w-4" />
-                                Manage Recruiters
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </div>
-
-            {/* ── Stats Row ── */}
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-                {stats.map((stat, i) => (
-                    <Card key={i} className="hover:shadow-sm transition-shadow">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
-                                <div className={`h-8 w-8 rounded-lg ${stat.iconBg} flex items-center justify-center`}>
-                                    <stat.icon className={`h-4 w-4 ${stat.iconColor}`} />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {stat.value === 0 ? "No data yet" : "Total"}
-                            </p>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* ── Quick Actions (PRIMARY FEATURE) ── */}
-            <div className="space-y-3">
-                <div>
-                    <h2 className="text-lg font-bold tracking-tight">Quick Actions</h2>
-                    <p className="text-sm text-muted-foreground">Everything you need, one click away</p>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <QuickActionButton
-                        icon={PlusCircle}
-                        label="Post a Job"
-                        company={company}
-                        description="Create a new job listing"
-                        variant="default"
-                    />
-                    <QuickActionButton
-                        icon={UserPlus}
-                        company={company}
-                        label="Invite Recruiter"
-                        description="Add team members"
-                        accent="bg-violet-500/10"
-                    />
-                    <QuickActionButton
-                        icon={ClipboardList}
-                        company={company}
-                        label="View Applications"
-                        description="Review candidates"
-                        accent="bg-emerald-500/10"
-                    />
-                    <QuickActionButton
-                        icon={Settings}
-                        company={company}
-                        label="Company Settings"
-                        description="Manage preferences"
-                        accent="bg-slate-500/10"
-                    />
-                </div>
-            </div>
-
-            <Separator />
-
-            {/* ── Bottom Section: Details + Status ── */}
-            <div className="grid gap-6 lg:grid-cols-3">
-                {/* Company Details */}
-                <Card className="lg:col-span-2">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Company Details</CardTitle>
-                        <CardDescription>Overview of your organization</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-1">
-                        {companyDetails.map((detail, i) => (
-                            <div
-                                key={i}
-                                className="flex items-center justify-between py-2.5 border-b last:border-0"
-                            >
-                                <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                                    <detail.icon className="h-4 w-4 shrink-0" />
-                                    {detail.label}
-                                </div>
-                                {detail.isLink ? (
-                                    <a
-                                        href={detail.value}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-                                    >
-                                        {detail.value}
-                                        <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                ) : (
-                                    <span className="text-sm font-semibold">{detail.value}</span>
+                    {(perms.canEditCompany || perms.canManageRecruiters) && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="icon" className="h-7 w-7">
+                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {perms.canEditCompany && (
+                                    <DropdownMenuItem className="gap-2 text-xs">
+                                        <Settings className="h-3.5 w-3.5" /> Edit Company
+                                    </DropdownMenuItem>
                                 )}
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
+                                {perms.canManageRecruiters && (
+                                    <DropdownMenuItem className="gap-2 text-xs">
+                                        <UserCircle className="h-3.5 w-3.5" /> Manage Recruiters
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                </div>
+            </div>
 
-                {/* Status + Info */}
-                <div className="space-y-4">
-                    {/* Active Status */}
-                    <Card className="border-emerald-500/25 bg-emerald-500/5">
-                        <CardContent className="pt-5 pb-5">
-                            <div className="flex items-start gap-3">
-                                <div className="h-10 w-10 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-sm text-emerald-700 dark:text-emerald-400">
-                                        Company Active
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                        Your company is live and accepting applications
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {/* ── Stats ──────────────────────────────────────────────────── */}
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+                {stats.map((s, i) => <StatCard key={i} {...s} />)}
+            </div>
 
-                    {/* Summary Card */}
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">At a Glance</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
+            {/* ── Quick Actions ───────────────────────────────────────────── */}
+            <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                        Quick Actions
+                    </p>
+                </div>
+                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                    {quickActions.map((a, i) => <QuickActionButton key={i} {...a} />)}
+                </div>
+
+                {(perms.isEmployee || perms.isRecruiter) && (
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] ${perms.isEmployee
+                            ? "bg-muted/40 border text-muted-foreground"
+                            : "bg-blue-500/5 border border-blue-500/15 text-muted-foreground"
+                        }`}>
+                        {perms.isEmployee ? <Shield className="h-3 w-3 shrink-0" /> : <BadgeCheck className="h-3 w-3 shrink-0 text-blue-400" />}
+                        {perms.isEmployee
+                            ? <span>You have <strong className="text-foreground">employee</strong> access — view only. Contact your founder or recruiter to change this.</span>
+                            : <span>You have <strong className="text-foreground">recruiter</strong> access. You can invite employees and review applications.</span>
+                        }
+                    </div>
+                )}
+            </div>
+
+            {/* ── Bottom grid ────────────────────────────────────────────── */}
+            <div className="grid gap-4 lg:grid-cols-3">
+
+                {/* Left — Company Info + Details together */}
+                <div className="lg:col-span-2 space-y-4">
+
+                    {/* Company details — compact rows, no empty space */}
+                    <div className="rounded-xl border bg-card overflow-hidden">
+                        <div className="px-4 py-3 border-b flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold">Company Details</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">Overview of your organization</p>
+                            </div>
+                        </div>
+                        <div className="divide-y">
+                            {companyDetails.map((d, i) => (
+                                <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <d.icon className="h-3.5 w-3.5 shrink-0" />
+                                        {d.label}
+                                    </div>
+                                    {d.isLink ? (
+                                        <a
+                                            href={d.value}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                                        >
+                                            {d.value}
+                                            <ExternalLink className="h-2.5 w-2.5" />
+                                        </a>
+                                    ) : (
+                                        <span className="text-xs font-semibold text-foreground">{d.value}</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* At a glance — horizontal row instead of big card */}
+                    <div className="rounded-xl border bg-card px-4 py-3">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+                            At a Glance
+                        </p>
+                        <div className="grid grid-cols-3 gap-3">
                             {[
                                 { label: "Open Positions", value: 0, icon: Briefcase },
                                 { label: "Pending Reviews", value: 0, icon: ClipboardList },
                                 { label: "Team Members", value: 0, icon: Users },
                             ].map((item, i) => (
-                                <div key={i} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <item.icon className="h-3.5 w-3.5" />
-                                        {item.label}
+                                <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
+                                    <div className="h-7 w-7 rounded-md bg-background flex items-center justify-center border shrink-0">
+                                        <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
                                     </div>
-                                    <Badge variant="secondary" className="font-bold tabular-nums">
-                                        {item.value}
-                                    </Badge>
+                                    <div>
+                                        <p className="text-base font-bold leading-none">{item.value}</p>
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">{item.label}</p>
+                                    </div>
                                 </div>
                             ))}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-3">
+
+                    {/* Company status */}
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-emerald-400 leading-tight">Company Active</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">Live · accepting applications</p>
+                        </div>
+                    </div>
+
+                    {/* Your Profile card — self-contained, no overflow */}
+                    <div className="rounded-xl border bg-card overflow-hidden">
+                        {/* role color strip */}
+                        <div className={`h-0.5 w-full ${roleConfig.stripClass}`} />
+                        <div className="px-4 pt-3 pb-4 space-y-3.5">
+
+                            {/* header */}
+                            <div>
+                                <p className="text-sm font-semibold">Your Profile</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">Your presence in this company</p>
+                            </div>
+
+                            {/* user row */}
+                            <div className="flex items-center gap-2.5">
+                                <Avatar className="h-9 w-9 rounded-lg border border-border shrink-0">
+                                    <AvatarFallback className="rounded-lg text-xs font-bold bg-muted">
+                                        {userInitials}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold truncate leading-tight">{user?.fullName ?? "—"}</p>
+                                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user?.email}</p>
+                                </div>
+                                <Badge className={`gap-1 text-[11px] h-5 px-2 font-medium shrink-0 ${roleConfig.badgeClass}`}>
+                                    <RoleIcon className="h-2.5 w-2.5" />
+                                    {roleConfig.label}
+                                </Badge>
+                            </div>
+
+                            {/* divider */}
+                            <div className="border-t" />
+
+                            {/* permissions */}
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                                    Permissions
+                                </p>
+                                {permissions.map((p, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <span className={`text-[11px] ${p.allowed ? "text-foreground" : "text-muted-foreground/60"}`}>
+                                            {p.label}
+                                        </span>
+                                        {p.allowed
+                                            ? <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                                            : <XCircle className="h-3 w-3 text-muted-foreground/25 shrink-0" />
+                                        }
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
+
         </div>
     )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CompanyPage() {
     const { data: company, isLoading } = useCompany()
 
     return (
         <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 72)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
+            style={{
+                "--sidebar-width": "calc(var(--spacing) * 72)",
+                "--header-height": "calc(var(--spacing) * 12)",
+            } as React.CSSProperties}
         >
             <AppSidebar variant="inset" />
             <SidebarInset>

@@ -19,7 +19,7 @@ export const getCompanyByUserId = async () => {
       return null; // ✅ Always return something
     }
 
-    return response.data[0];
+    return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
