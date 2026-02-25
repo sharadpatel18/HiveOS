@@ -1,4 +1,18 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Interviewer
+
+This is a Next.js application for company management, hiring workflows, and role-based access control.
+
+## Project Docs
+
+- [Authentication Features](./AUTHENTICATION_FEATURES.md)
+- [Company Creation, Hiring, and RBAC](./COMPANY_HIRING_RBAC.md)
+
+## Core Features
+
+- Cookie-based JWT auth (access + refresh tokens)
+- Company creation and membership mapping
+- Invite-based hiring flow (invite, accept, join)
+- Role-based access for Founder, Recruiter, Employee, and User
 
 ## Getting Started
 
@@ -16,9 +30,7 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+You can start editing the app by modifying files in `app/`. Changes auto-update in development.
 
 ## Learn More
 
