@@ -129,7 +129,7 @@ function InviteMemberDialog({
 
             await inviteUserToCompany({ companyId, email, role })
             // await inviteMember({ email, role })
-            console.log("Inviting:", { email, role })
+
             handleClose()
         } catch (err) {
             console.error("Failed to invite member:", err)

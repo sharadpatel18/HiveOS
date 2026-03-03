@@ -21,6 +21,7 @@ import { toast } from "sonner"
 import { getUserData, loginUser } from "@/services/auth-services"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAuthStore } from "@/store/auth-store"
 
 export function LoginForm({
   className,
@@ -28,6 +29,7 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const setUser = useAuthStore.getState().setUser; // ← call outside React if needed
   const redirect = searchParams.get("redirect")
   const token = searchParams.get("token")
   const [isMounted, setIsMounted] = useState(false);
@@ -53,9 +55,9 @@ export function LoginForm({
       const response = await loginUser(formData);
 
       toast.success(response.message);
-      const results = await getUserData();
-
-      if (results) {
+      const user = await getUserData();
+      setUser(user);
+      if (user) {
         if (redirect) {
           router.push(redirect);
         } else {

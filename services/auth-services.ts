@@ -44,13 +44,13 @@ export const loginUser = async (data: LoginUser) => {
   }
 };
 
-export const getUserData = async (): Promise<AuthUser> => {
+export const getUserData = async () => {
   try {
     const response = await axios.get("/api/auth/me", {
       withCredentials: true,
     });
 
-    return response.data.user;
+    return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {

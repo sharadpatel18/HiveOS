@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const auth = await withAuth(request);
+    const auth: any = await withAuth(request);
     if ("error" in auth) return auth.error;
 
-    const { id: userId } = auth.user;
+    const userId = auth.id;
     const body = await request.json();
 
     const validateSchema = companyValidation.safeParse(body);
@@ -103,11 +103,10 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const auth = await withAuth(request);
+    const auth: any = await withAuth(request);
     if ("error" in auth) return auth.error;
 
-    const { id: userId } = auth.user;
-
+    const userId = auth.id;
     // Find the company where this user is a member (any role)
     // companyMembers links userId → companyId, so we join company on that
     const result = await db

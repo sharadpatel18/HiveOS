@@ -10,7 +10,7 @@ import { companyInviteTemplate } from "@/lib/email/templates";
 
 export async function POST(req: Request) {
   try {
-    const auth = await withAuth(req);
+    const auth: any = await withAuth(req);
     if ("error" in auth) return auth.error;
 
     const { companyId, email, role } = await req.json();
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       .select()
       .from(companyMembers)
       .where(
-        eq(companyMembers.userId, auth.user.id) &&
+        eq(companyMembers.userId, auth.id) &&
           eq(companyMembers.companyId, companyId),
       );
 
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       email,
       role,
       token,
-      invitedBy: auth.user.id,
+      invitedBy: auth.id,
       expiresAt,
     });
 
@@ -74,7 +74,6 @@ export async function POST(req: Request) {
       .where(eq(company.id, companyId));
 
     const inviteLink = `${process.env.NEXT_PUBLIC_API_URL}/company/invite?token=${token}`;
-    console.log(inviteLink);
 
     // 6️⃣ Send email (do NOT block DB success if email fails)
     const result = await sendEmail({
@@ -87,7 +86,6 @@ export async function POST(req: Request) {
       }),
     });
 
-    console.log(result);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
@@ -100,7 +98,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const auth = await withAuth(req);
+    const auth: any = await withAuth(req);
     if ("error" in auth) return auth.error;
 
     const invites = await db
@@ -127,7 +125,7 @@ export async function GET(req: Request) {
       .from(companyInvites)
       .leftJoin(users, eq(users.id, companyInvites.invitedBy))
       .leftJoin(company, eq(company.id, companyInvites.companyId))
-      .where(eq(companyInvites.userId, auth.user.id));
+      .where(eq(companyInvites.userId, auth.id));
 
     return NextResponse.json(invites);
   } catch (error) {

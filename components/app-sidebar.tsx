@@ -81,10 +81,10 @@ function useActiveNav(defaultKey: string) {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [isMount, setIsMount] = React.useState(false);
   const user = useAuthStore((state) => state.user)
   const { data: company } = useCompany()
   const { activeKey, setActiveKey } = useActiveNav("dashboard")
-
   const role = getEffectiveRole(
     company?.memberRole,
     user?.role,
@@ -193,6 +193,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: IconSearch,
     },
   ]
+
+  React.useEffect(() => {
+    setIsMount(true)
+  }, [])
+
+  if (!isMount) {
+    return null
+  }
 
   return (
     // ✅ Exact same Sidebar shell as original shadcn

@@ -38,7 +38,6 @@ export default function CreateCompanyDialog({
     children: React.ReactNode
 }) {
     const user = useAuthStore((state) => state.user)
-    console.log(user)
     const [loading, setLoading] = useState(false)
 
     const [formData, setFormData] = useState({
@@ -72,10 +71,7 @@ export default function CreateCompanyDialog({
 
         try {
             setLoading(true)
-
             const res = await createCompany(payload);
-
-            console.log(res)
         } catch (err) {
             console.error(err)
         } finally {

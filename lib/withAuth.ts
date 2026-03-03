@@ -10,17 +10,17 @@ export async function withAuth(request: Request) {
     ?.split("=")[1];
 
   if (!token) {
-    return {
-      error: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
-    };
+    return NextResponse.json(
+      { message: "Unauthorized", success: false },
+      { status: 401 },
+    );
   }
 
   try {
     const user = verifyToken(token);
-    return { user };
-  } catch {
-    return {
-      error: NextResponse.json({ message: "Invalid token" }, { status: 401 }),
-    };
+    return user;
+  } catch (err) {
+    console.error("[withAuth] Token verification failed:", err);
+    throw err;
   }
 }

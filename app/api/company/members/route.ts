@@ -7,10 +7,11 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const auth = await withAuth(request);
+    const auth: any = await withAuth(request);
+
     if ("error" in auth) return auth.error;
 
-    const { id: userId } = auth.user;
+    const { id: userId } = auth;
     const body = await request.json();
 
     const validateSchema = companyMembersValidation.safeParse(body);
@@ -54,4 +55,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

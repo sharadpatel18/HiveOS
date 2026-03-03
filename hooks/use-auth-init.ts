@@ -1,3 +1,4 @@
+// useAuthInit.ts
 "use client";
 
 import { useEffect } from "react";
@@ -6,13 +7,19 @@ import { getUserData } from "@/services/auth-services";
 
 export const useAuthInit = () => {
   const setUser = useAuthStore((s) => s.setUser);
+  const clearUser = useAuthStore((s) => s.clearUser);
 
   useEffect(() => {
     const loadUser = async () => {
-      const user = await getUserData();
-      setUser(user);
+      try {
+        const user = await getUserData();
+        setUser(user);
+      } catch {
+        // Not authenticated — clear any stale state
+        clearUser();
+      }
     };
 
     loadUser();
-  }, [setUser]);
+  }, []); // ← empty deps, runs once on mount only
 };

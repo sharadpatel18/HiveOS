@@ -12,7 +12,6 @@ export async function GET(
     const auth = await withAuth(request);
     if ("error" in auth) return auth.error;
 
-    // ✅ unwrap params
     const { companyId } = await context.params;
 
     if (!companyId) {

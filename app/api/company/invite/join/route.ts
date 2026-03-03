@@ -7,11 +7,10 @@ import { companyJoinValidation } from "@/validations/company.validation";
 
 export async function POST(request: Request) {
   try {
-    const auth = await withAuth(request);
+    const auth: any = await withAuth(request);
     if ("error" in auth) return auth.error;
 
     const body = await request.json();
-    // console.log(token, id, role);
 
     const validateSchema = companyJoinValidation.safeParse(body);
 
@@ -52,7 +51,7 @@ export async function POST(request: Request) {
       .where(eq(companyInvites.id, id));
 
     await db.insert(companyMembers).values({
-      userId: auth.user.id,
+      userId: auth.id,
       companyId: requestInvite[0].companyId,
       role,
       hiredBy: requestInvite[0].invitedBy,
