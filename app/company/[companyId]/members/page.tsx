@@ -52,14 +52,16 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 
-import { Users, UserCheck, Briefcase, Search, UserPlus, Crown } from "lucide-react"
+import { Users, UserCheck, Briefcase, Search, UserPlus, Crown, UserX, MoveRight, MailCheck } from "lucide-react"
 
-import { getCompanyMembersById, inviteUserToCompany } from "@/services/company-service"
+import { inviteUserToCompany, searchUserByEmail } from "@/services/company-service"
 import { useAuthStore } from "@/store/auth-store"
+import { toast } from "sonner"
+import { useCompany } from "@/hooks/use-company"
 
 interface Member {
     id: string
-    name: string
+    fullName: string
     email: string
     role: "FOUNDER" | "RECRUITER" | "EMPLOYEE"
     joinedAt: string
@@ -92,10 +94,20 @@ const ASSIGNABLE_ROLES: Record<string, { value: string; label: string }[]> = {
     FOUNDER: [
         { value: "RECRUITER", label: "Recruiter" },
         { value: "EMPLOYEE", label: "Employee" },
+        { value: "MANAGER", label: "Manager" },
+        { value: "TEAMLEAD", label: "Team Lead" },
     ],
     RECRUITER: [
         { value: "EMPLOYEE", label: "Employee" },
+        { value: "MANAGER", label: "Manager" },
     ],
+    MANAGER: [
+        { value: "EMPLOYEE", label: "Employee" },
+        { value: "TEAMLEAD", label: "Team Lead" },
+    ],
+    TEAMLEAD: [
+        { value: "EMPLOYEE", label: "Employee" },
+    ]
 }
 
 function InviteMemberDialog({
@@ -112,27 +124,47 @@ function InviteMemberDialog({
     const [email, setEmail] = useState("")
     const [role, setRole] = useState("")
     const [loading, setLoading] = useState(false)
+    const [searching, setSearching] = useState(false)
+    const [foundUser, setFoundUser] = useState<{ name: string; email: string } | null>(null)
+    const [searched, setSearched] = useState(false)
 
     const assignableRoles = ASSIGNABLE_ROLES[currentRole] ?? []
 
     function handleClose() {
         setEmail("")
         setRole("")
+        setFoundUser(null)
+        setSearched(false)
         onOpenChange(false)
     }
 
+    async function handleSearch() {
+        if (!email) return
+        setSearching(true)
+        setSearched(false)
+        setFoundUser(null)
+        setRole("")
+        try {
+            const invitedUser = await searchUserByEmail(email)
+            setFoundUser(invitedUser ?? null)
+        } catch (err) {
+            console.log("Failed to search user:", err)
+        } finally {
+            setSearching(false)
+            setSearched(true)
+        }
+    }
+
     async function handleSubmit() {
-        if (!email || !role) return
+        if (!foundUser || !role) return
         setLoading(true)
         try {
-            // TODO: call your invite API here
-
-            await inviteUserToCompany({ companyId, email, role })
-            // await inviteMember({ email, role })
-
+            await inviteUserToCompany({ companyId, email: foundUser.email, role })
+            toast.success("Invitation sent successfully")
             handleClose()
         } catch (err) {
-            console.error("Failed to invite member:", err)
+            console.log("Failed to invite member:", err)
+            toast.error("Failed to send invitation")
         } finally {
             setLoading(false)
         }
@@ -147,50 +179,86 @@ function InviteMemberDialog({
                         Invite Member
                     </DialogTitle>
                     <DialogDescription>
-                        Send an invitation to a new team member. They'll receive an email to join your company.
+                        Search for a user by email to invite them to your company.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="flex flex-col gap-5 py-2">
-                    {/* Email Field */}
+                    {/* Email Search */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="invite-email">
                             Email address <span className="text-destructive">*</span>
                         </Label>
-                        <Input
-                            id="invite-email"
-                            type="email"
-                            placeholder="member@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
+                        <div className="flex gap-2">
+                            <Input
+                                id="invite-email"
+                                type="email"
+                                placeholder="member@example.com"
+                                value={email}
+                                onChange={(e) => {
+                                    setEmail(e.target.value)
+                                    setFoundUser(null)
+                                    setSearched(false)
+                                }}
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={handleSearch}
+                                disabled={!email || searching}
+                            >
+                                {searching ? "Searching..." : "Search"}
+                            </Button>
+                        </div>
                     </div>
 
-                    {/* Role Field */}
-                    <div className="flex flex-col gap-2">
-                        <Label htmlFor="invite-role">
-                            Assign role <span className="text-destructive">*</span>
-                        </Label>
-                        <Select value={role} onValueChange={setRole}>
-                            <SelectTrigger id="invite-role" className="w-full">
-                                <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {assignableRoles.map((r) => (
-                                    <SelectItem key={r.value} value={r.value}>
-                                        <div className="flex items-center gap-2">
-                                            {r.value === "RECRUITER" ? (
-                                                <UserCheck className="w-4 h-4 text-violet-500" />
-                                            ) : (
-                                                <Briefcase className="w-4 h-4 text-sky-500" />
-                                            )}
-                                            {r.label}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {/* User Not Found */}
+                    {searched && !foundUser && (
+                        <div className="flex items-center gap-2 text-sm text-destructive">
+                            <UserX className="w-4 h-4" />
+                            No user found with that email address.
+                        </div>
+                    )}
+
+                    {/* Found User Card + Role Select */}
+                    {foundUser && (
+                        <>
+                            <div className="flex items-center gap-3 rounded-lg border p-3 bg-muted/40">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                                    {foundUser.name?.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium">{foundUser.name}</span>
+                                    <span className="text-xs text-muted-foreground">{foundUser.email}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <Label htmlFor="invite-role">
+                                    Assign role <span className="text-destructive">*</span>
+                                </Label>
+                                <Select value={role} onValueChange={setRole}>
+                                    <SelectTrigger id="invite-role" className="w-full">
+                                        <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {assignableRoles.map((r) => (
+                                            <SelectItem key={r.value} value={r.value}>
+                                                <div className="flex items-center gap-2">
+                                                    {r.value === "RECRUITER" ? (
+                                                        <UserCheck className="w-4 h-4 text-violet-500" />
+                                                    ) : (
+                                                        <Briefcase className="w-4 h-4 text-sky-500" />
+                                                    )}
+                                                    {r.label}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <DialogFooter className="gap-2">
@@ -199,7 +267,7 @@ function InviteMemberDialog({
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!email || !role || loading}
+                        disabled={!foundUser || !role || loading}
                         className="gap-2"
                     >
                         <UserPlus className="w-4 h-4" />
@@ -210,7 +278,6 @@ function InviteMemberDialog({
         </Dialog>
     )
 }
-
 function StatCard({
     icon: Icon,
     label,
@@ -260,7 +327,7 @@ function MembersTable({
 
     const filtered = members.filter(
         (m) =>
-            m.name?.toLowerCase().includes(search.toLowerCase()) ||
+            m.fullName?.toLowerCase().includes(search.toLowerCase()) ||
             m.email?.toLowerCase().includes(search.toLowerCase())
     )
 
@@ -325,14 +392,14 @@ function MembersTable({
                                             <Avatar className="h-8 w-8 border">
                                                 <AvatarFallback
                                                     className={`text-white text-xs font-semibold ${getAvatarColor(
-                                                        member.name
+                                                        member.fullName
                                                     )}`}
                                                 >
-                                                    {member.name?.charAt(0).toUpperCase()}
+                                                    {member.fullName?.charAt(0).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <span className="font-medium text-sm">
-                                                {member.name}
+                                                {member.fullName}
                                             </span>
                                         </div>
                                     </TableCell>
@@ -386,22 +453,24 @@ export default function MembersPage() {
     const [members, setMembers] = useState<Member[]>([])
     const [loading, setLoading] = useState(true)
     const [inviteOpen, setInviteOpen] = useState(false)
-
+    const { data: company } = useCompany()
     const { user } = useAuthStore()
     const currentRole = user?.role?.toUpperCase()
     const isFounder = currentRole === "FOUNDER"
     const isRecruiter = currentRole === "RECRUITER"
-    const canInvite = isFounder || isRecruiter
+    const isManager = currentRole === "MANAGER"
+    const isTeamLead = currentRole === "TEAMLEAD"
+    const canInvite = isFounder || isRecruiter || isManager || isTeamLead
 
     useEffect(() => {
         if (!companyId) return
-
+        if (!company) return
+        console.log(company.members)
         async function fetchMembers() {
             try {
-                const res = await getCompanyMembersById(companyId)
-                setMembers(res ?? [])
+                setMembers(company.members ?? [])
             } catch (err) {
-                console.error("Failed to fetch members:", err)
+                console.log("Failed to fetch members:", err)
                 setMembers([])
             } finally {
                 setLoading(false)
@@ -409,10 +478,12 @@ export default function MembersPage() {
         }
 
         fetchMembers()
-    }, [companyId])
+    }, [companyId, company])
 
     const founders = members.filter((m) => m.role?.toUpperCase() === "FOUNDER")
     const recruiters = members.filter((m) => m.role?.toUpperCase() === "RECRUITER")
+    const managers = members.filter((m) => m.role?.toUpperCase() === "MANAGER")
+    const teamLeads = members.filter((m) => m.role?.toUpperCase() === "TEAMLEAD")
     const employees = members.filter((m) => m.role?.toUpperCase() === "EMPLOYEE")
 
     return (
@@ -481,33 +552,14 @@ export default function MembersPage() {
                             </div>
 
                             {/* Stat Cards */}
-                            <div className="flex flex-wrap gap-3">
-                                <StatCard
-                                    icon={Users}
-                                    label="Total Members"
-                                    value={loading ? 0 : members.length}
-                                    color="bg-slate-100 text-slate-700"
-                                />
-                                <StatCard
-                                    icon={Crown}
-                                    label="Founders"
-                                    value={loading ? 0 : founders.length}
-                                    color="bg-amber-100 text-amber-700"
-                                />
-                                <StatCard
-                                    icon={UserCheck}
-                                    label="Recruiters"
-                                    value={loading ? 0 : recruiters.length}
-                                    color="bg-violet-100 text-violet-700"
-                                />
-                                <StatCard
-                                    icon={Briefcase}
-                                    label="Employees"
-                                    value={loading ? 0 : employees.length}
-                                    color="bg-sky-100 text-sky-700"
-                                />
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <StatCard icon={Users} label="Total Members" value={loading ? 0 : members.length} color="bg-slate-500/10 text-slate-400" />
+                                <StatCard icon={Crown} label="Founders" value={loading ? 0 : founders.length} color="bg-amber-500/10 text-amber-400" />
+                                <StatCard icon={UserCheck} label="Recruiters" value={loading ? 0 : recruiters.length} color="bg-violet-500/10 text-violet-400" />
+                                <StatCard icon={MoveRight} label="Managers" value={loading ? 0 : managers.length} color="bg-blue-500/10 text-blue-400" />
+                                <StatCard icon={MailCheck} label="Team Leads" value={loading ? 0 : teamLeads.length} color="bg-emerald-500/10 text-emerald-400" />
+                                <StatCard icon={Briefcase} label="Employees" value={loading ? 0 : employees.length} color="bg-sky-500/10 text-sky-400" />
                             </div>
-
                             <Separator />
 
                             {/* Tabs Card */}
@@ -551,6 +603,26 @@ export default function MembersPage() {
                                                     {loading ? "—" : recruiters.length}
                                                 </Badge>
                                             </TabsTrigger>
+                                            <TabsTrigger value="manager">
+                                                <Briefcase className="w-3.5 h-3.5" />
+                                                Manager
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="ml-1 h-5 min-w-[20px] px-1.5 text-xs"
+                                                >
+                                                    {loading ? "—" : managers.length}
+                                                </Badge>
+                                            </TabsTrigger>
+                                            <TabsTrigger value="teamleads">
+                                                <Briefcase className="w-3.5 h-3.5" />
+                                                Team Leads
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="ml-1 h-5 min-w-[20px] px-1.5 text-xs"
+                                                >
+                                                    {loading ? "—" : teamLeads.length}
+                                                </Badge>
+                                            </TabsTrigger>
                                             <TabsTrigger value="employees" className="gap-1.5">
                                                 <Briefcase className="w-3.5 h-3.5" />
                                                 Employees
@@ -573,6 +645,14 @@ export default function MembersPage() {
 
                                         <TabsContent value="recruiters">
                                             <MembersTable members={recruiters} loading={loading} />
+                                        </TabsContent>
+
+                                        <TabsContent value="manager">
+                                            <MembersTable members={managers} loading={loading} />
+                                        </TabsContent>
+
+                                        <TabsContent value="teamleads">
+                                            <MembersTable members={teamLeads} loading={loading} />
                                         </TabsContent>
 
                                         <TabsContent value="employees">

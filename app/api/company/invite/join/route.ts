@@ -1,7 +1,7 @@
 import { withAuth } from "@/lib/withAuth";
 import { NextResponse } from "next/server";
 import db from "@/db/index";
-import { companyInvites, companyMembers } from "@/db/schemas";
+import { companyInvites, companyMembers, users } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { companyJoinValidation } from "@/validations/company.validation";
 
@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       hiredBy: requestInvite[0].invitedBy,
     });
 
+    await db.update(users).set({ role: role }).where(eq(users.id, auth.id));
     return NextResponse.json({ message: "Invite accepted", success: true });
   } catch (error) {
     return NextResponse.json(

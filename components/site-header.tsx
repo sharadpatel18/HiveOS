@@ -63,6 +63,9 @@ const ROLE_CONFIG: Record<string, { label: string; className: string; icon: Reac
   RECRUITER: { label: "Recruiter", className: "text-blue-400 bg-blue-500/10 border-blue-500/20", icon: UserPlus },
   EMPLOYEE: { label: "Employee", className: "text-slate-400 bg-slate-500/10 border-slate-500/20", icon: User },
   USER: { label: "Viewer", className: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20", icon: User },
+  MANAGER: { label: "Manager", className: "text-amber-400 bg-amber-500/10 border-amber-500/20", icon: User },
+  TEAMLEAD: { label: "Team Lead", className: "text-amber-400 bg-amber-500/10 border-amber-500/20", icon: User },
+  SUPERADMIN: { label: "Super Admin", className: "text-amber-400 bg-amber-500/10 border-amber-500/20", icon: User },
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────

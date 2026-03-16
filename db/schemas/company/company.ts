@@ -6,7 +6,7 @@ import {
   boolean,
   index,
 } from "drizzle-orm/pg-core";
-import { users } from "./user";
+import { users } from "../user/user";
 
 export const company = pgTable(
   "company",

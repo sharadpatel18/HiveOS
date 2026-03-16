@@ -1,12 +1,12 @@
 import db from "@/db";
 import { companyMembers, users } from "@/db/schemas";
-import { company } from "@/db/schemas/company";
+import { company } from "@/db/schemas";
 import { withAuth } from "@/lib/withAuth";
 import {
   companyMembersValidation,
   companyValidation,
 } from "@/validations/company.validation";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -107,11 +107,10 @@ export async function GET(request: Request) {
     if ("error" in auth) return auth.error;
 
     const userId = auth.id;
-    // Find the company where this user is a member (any role)
-    // companyMembers links userId → companyId, so we join company on that
-    const result = await db
+
+    // 1. Get company + user's role
+    const [companyData] = await db
       .select({
-        // Company fields
         id: company.id,
         name: company.name,
         slug: company.slug,
@@ -124,20 +123,36 @@ export async function GET(request: Request) {
         userId: company.userId,
         createdAt: company.createdAt,
         updatedAt: company.updatedAt,
-        // Member's role in this company
         memberRole: companyMembers.role,
       })
       .from(companyMembers)
-      .innerJoin(company, eq(company.id, companyMembers.companyId)) // ✅ correct join
-      .where(eq(companyMembers.userId, userId)) // ✅ filter by logged-in user
-      .limit(1); // one company per user for now
+      .innerJoin(company, eq(company.id, companyMembers.companyId))
+      .where(eq(companyMembers.userId, userId))
+      .limit(1);
 
-    if (result.length === 0) {
+    if (!companyData) {
       return NextResponse.json(null, { status: 200 });
       // returning null (not 404) so the frontend can show the "create company" state
     }
 
-    return NextResponse.json(result[0], { status: 200 });
+    // 2. Get all members of that company
+    const members = await db
+      .select({
+        id: companyMembers.id,
+        userId: companyMembers.userId,
+        fullName: users.name,
+        email: users.email,
+        role: companyMembers.role,
+        hiredBy: companyMembers.hiredBy,
+        joinedAt: companyMembers.joinedAt,
+        createdAt: companyMembers.createdAt,
+      })
+      .from(companyMembers)
+      .leftJoin(users, eq(users.id, companyMembers.userId))
+      .where(eq(companyMembers.companyId, companyData.id));
+
+    // 3. Combine and return
+    return NextResponse.json({ ...companyData, members }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

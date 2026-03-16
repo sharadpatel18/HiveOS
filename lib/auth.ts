@@ -21,7 +21,7 @@ export function verifyToken(token: string): {
     };
     return result;
   } catch (err) {
-    console.error(err);
+    console.log(err);
     throw new Error("Invalid token");
   }
 }

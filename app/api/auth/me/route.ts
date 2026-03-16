@@ -1,11 +1,25 @@
+import db from "@/db";
+import { users } from "@/db/schemas";
 import { withAuth } from "@/lib/withAuth";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   try {
-    const results = await withAuth(request);
+    const results: any = await withAuth(request);
+    if ("error" in results) return results.error;
 
-    return NextResponse.json(results);
+    const findUser = await db
+      .select({
+        id: users.id,
+        fullName: users.name,
+        email: users.email,
+        role: users.role,
+      })
+      .from(users)
+      .where(eq(users.id, results.id));
+
+    return NextResponse.json(findUser[0], { status: 200 });
   } catch (error) {
     return NextResponse.json(
       { message: "Internal server error", success: false },
