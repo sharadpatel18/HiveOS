@@ -273,11 +273,11 @@ export function CreateTaskDialog({ open, onOpenChange, members }: CreateTaskDial
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCreateTask} disabled={!title.trim()} className="gap-1.5">
+          <Button onClick={handleCreateTask} disabled={!title.trim()} className="mx-2">
             <Plus className="h-4 w-4" />
             Create Task
           </Button>

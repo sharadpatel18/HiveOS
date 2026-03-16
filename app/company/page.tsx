@@ -19,7 +19,7 @@ import {
     DropdownMenu, DropdownMenuContent,
     DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import CreateCompanyDialog from "@/components/create-company-dialog"
+import CreateCompanyDialog from "@/app/company/components/create-company-dialog"
 import { useCompany } from "@/hooks/use-company"
 import { useAuthStore } from "@/store/auth-store"
 import Link from "next/link"

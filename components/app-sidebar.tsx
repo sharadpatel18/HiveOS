@@ -16,6 +16,8 @@ import {
   IconListCheck,
   IconUsersGroup,
   IconClipboardList,
+  IconLayoutDashboard,
+  IconChartPie,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -36,6 +38,7 @@ import { useCompany } from "@/hooks/use-company"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Role } from "@/types/role"
+import { usePathname } from "next/navigation"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,6 +71,7 @@ const ROLE_META: Record<UserRole, { label: string; className: string }> = {
 const STORAGE_KEY = "sidebar_active_nav"
 
 function useActiveNav(defaultKey: string) {
+  const pathname = usePathname()
   const [activeKey, setActiveKeyRaw] = React.useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem(STORAGE_KEY) ?? defaultKey
@@ -82,7 +86,35 @@ function useActiveNav(defaultKey: string) {
     }
   }, [])
 
+  // Auto-detect active key from pathname
+  React.useEffect(() => {
+    if (pathname.includes("/teams/") && pathname.includes("/dashboard")) {
+      setActiveKey("team-dashboard")
+    } else if (pathname.includes("/teams/") && pathname.includes("/members")) {
+      setActiveKey("team-members")
+    } else if (pathname.includes("/teams/") && pathname.includes("/settings")) {
+      setActiveKey("team-settings")
+    } else if (pathname.includes("/teams/") && pathname.includes("/analytics")) {
+      setActiveKey("team-analytics")
+    } else if (pathname === "/teams") {
+      setActiveKey("teams")
+    } else if (pathname === "/dashboard") {
+      setActiveKey("dashboard")
+    } else if (pathname.includes("/company/") && pathname.includes("/members")) {
+      setActiveKey("members")
+    } else if (pathname.includes("/company") && !pathname.includes("/members")) {
+      setActiveKey("company")
+    }
+  }, [pathname, setActiveKey])
+
   return { activeKey, setActiveKey }
+}
+
+// ─── Extract Team ID from URL ─────────────────────────────────────────────────
+function useTeamId() {
+  const pathname = usePathname()
+  const match = pathname.match(/\/teams\/([^\/]+)/)
+  return match?.[1] ?? null
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -92,6 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const user = useAuthStore((state) => state.user)
   const { data: company } = useCompany()
   const { activeKey, setActiveKey } = useActiveNav("dashboard")
+  const teamId = useTeamId()
 
   const role = getEffectiveRole(
     company?.memberRole,
@@ -105,7 +138,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const companyId = company?.id
   const roleMeta = ROLE_META[role] ?? ROLE_META.USER
 
-  // ── 1. General nav ────────────────────────────────────────────────────────
   // ── 1. General nav ────────────────────────────────────────────────────────
   const navGeneral = [
     {
@@ -159,13 +191,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navTeams = company && companyId
     ? [
       {
-        title: "Teams",
+        title: "All Teams",
         url: `/teams`,
         icon: IconUsersGroup,
         isActive: activeKey === "teams",
         onClick: () => setActiveKey("teams"),
         disabled: isEmployee || role === "USER",
         disabledReason: "Only founders and managers can view",
+      },
+    ]
+    : []
+
+  // ── 3a. Current Team Navigation (only show when inside a team) ────────────
+  const navCurrentTeam = teamId
+    ? [
+      {
+        title: "Team Dashboard",
+        url: `/teams/${teamId}/dashboard`,
+        icon: IconLayoutDashboard,
+        isActive: activeKey === "team-dashboard",
+        onClick: () => setActiveKey("team-dashboard"),
+      },
+      {
+        title: "Team Members",
+        url: `/teams/${teamId}/members`,
+        icon: IconUsers,
+        isActive: activeKey === "team-members",
+        onClick: () => setActiveKey("team-members"),
+      },
+      {
+        title: "Team Tasks",
+        url: `/teams/${teamId}/tasks`,
+        icon: IconListCheck,
+        isActive: activeKey === "team-tasks",
+        onClick: () => setActiveKey("team-tasks"),
+      },
+      {
+        title: "Team Analytics",
+        url: `/teams/${teamId}/analytics`,
+        icon: IconChartPie,
+        isActive: activeKey === "team-analytics",
+        onClick: () => setActiveKey("team-analytics"),
+      },
+      {
+        title: "Team Settings",
+        url: `/teams/${teamId}/settings`,
+        icon: IconSettings,
+        isActive: activeKey === "team-settings",
+        onClick: () => setActiveKey("team-settings"),
+        disabled: isEmployee || role === "USER",
+        disabledReason: "Only team leads and above can access settings",
       },
     ]
     : []
@@ -203,7 +278,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         onClick: () => setActiveKey("applications"),
         disabled: isEmployee || role === "USER",
         disabledReason: "Only founders and recruiters can view",
-      }
+      },
     ]
     : []
 
@@ -232,18 +307,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   if (!isMount) return null
 
-  const companyLabel = (
-    <span className="flex items-center justify-between gap-2 w-full pr-1">
-      <span className="truncate">{company?.name}</span>
-      <Badge className={cn("text-[10px] h-4 px-1.5 font-medium shrink-0", roleMeta.className)}>
-        {roleMeta.label}
-      </Badge>
-    </span>
-  )
-
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-
       {/* ── Header ── */}
       <SidebarHeader>
         <SidebarMenu>
@@ -260,26 +325,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* ── Content ── */}
       <SidebarContent>
-
         {/* General */}
         <NavMain items={navGeneral} showQuickCreate />
 
         {company && companyId ? (
           <>
-            {/* Section 1 — General
-            <NavMain items={navGeneral} label="General" showQuickCreate /> */}
+            {/* Section 1 — Members */}
+            <NavMain
+              items={navMembers}
+              label={
+                <span className="flex items-center justify-between gap-2 w-full pr-1">
+                  <span className="truncate">Members</span>
+                  <Badge className={cn("text-[10px] h-4 px-1.5 font-medium shrink-0", roleMeta.className)}>
+                    {roleMeta.label}
+                  </Badge>
+                </span>
+              }
+            />
 
-            {/* Section 2 — Members */}
-            <NavMain items={navMembers} label={
-              <span className="flex items-center justify-between gap-2 w-full pr-1">
-                <span className="truncate">Members</span>
-                <Badge className={cn("text-[10px] h-4 px-1.5 font-medium shrink-0", roleMeta.className)}>
-                  {roleMeta.label}
-                </Badge>
-              </span>
-            } />
-
-            {/* Section 3 — Team Management */}
+            {/* Section 2 — Team Management */}
             <NavMain
               items={navTeams}
               label={
@@ -289,7 +353,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               }
             />
 
-            {/* Section 4 — Task Management */}
+            {/* Section 2a — Current Team (only when inside a team) */}
+            {teamId && navCurrentTeam.length > 0 && (
+              <NavMain
+                items={navCurrentTeam}
+                label={
+                  <span className="flex items-center justify-between gap-2 w-full pr-1">
+                    <span className="truncate">Current Team</span>
+                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 shrink-0">
+                      Active
+                    </Badge>
+                  </span>
+                }
+              />
+            )}
+
+            {/* Section 3 — Task Management */}
             <NavMain
               items={navTasks}
               label={
@@ -299,6 +378,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               }
             />
 
+            {/* Section 4 — Applications */}
             <NavMain
               items={navApplications}
               label={
@@ -332,7 +412,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
 
         <NavSecondary items={navSecondary} className="mt-auto" />
-
       </SidebarContent>
 
       {/* ── Footer ── */}
@@ -348,7 +427,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           }
         />
       </SidebarFooter>
-
     </Sidebar>
   )
 }
