@@ -23,6 +23,7 @@ import CreateCompanyDialog from "@/components/create-company-dialog"
 import { useCompany } from "@/hooks/use-company"
 import { useAuthStore } from "@/store/auth-store"
 import Link from "next/link"
+import { Role } from "@/types/role"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ type Company = {
     memberRole: string
 }
 
-type UserRole = "FOUNDER" | "RECRUITER" | "EMPLOYEE" | "USER"
+type UserRole = Role
 
 // ─── Role Config ──────────────────────────────────────────────────────────────
 
@@ -78,6 +79,22 @@ const ROLE_CONFIG: Record<string, {
         icon: User,
         description: "View-only access to company details",
     },
+    MANAGER: {
+        label: "Manager",
+        badgeClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+        stripClass: "bg-amber-500",
+        dotClass: "bg-amber-500",
+        icon: UserPlus,
+        description: "Invite employees & review applications",
+    },
+    TEAMLEAD: {
+        label: "Team Lead",
+        badgeClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+        stripClass: "bg-amber-500",
+        dotClass: "bg-amber-500",
+        icon: UserPlus,
+        description: "Invite employees & review applications",
+    },
     USER: {
         label: "Viewer",
         badgeClass: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20",
@@ -92,11 +109,13 @@ const ROLE_CONFIG: Record<string, {
 
 function usePermissions(company: Company | null | undefined) {
     const user = useAuthStore((s) => s.user)
-    const rawRole = (company?.memberRole ?? user?.role ?? "USER").toUpperCase() as UserRole
+    const rawRole = user?.role.toUpperCase() as UserRole
     const isFounder = rawRole === "FOUNDER" || company?.userId === user?.id
     const isRecruiter = !isFounder && rawRole === "RECRUITER"
+    const isManager = !isFounder && !isRecruiter && rawRole === "MANAGER"
+    const isTeamLead = !isFounder && !isRecruiter && rawRole === "TEAMLEAD"
     const isEmployee = !isFounder && !isRecruiter && rawRole === "EMPLOYEE"
-    const effectiveRole: UserRole = isFounder ? "FOUNDER" : isRecruiter ? "RECRUITER" : isEmployee ? "EMPLOYEE" : "USER"
+    const effectiveRole: UserRole = isFounder ? "FOUNDER" : isRecruiter ? "RECRUITER" : isManager ? "MANAGER" : isTeamLead ? "TEAMLEAD" : isEmployee ? "EMPLOYEE" : "USER"
 
     return {
         role: effectiveRole,
@@ -104,7 +123,7 @@ function usePermissions(company: Company | null | undefined) {
         isFounder, isRecruiter, isEmployee,
         canPostJob: isFounder,
         canInviteRecruiter: isFounder,
-        canInviteEmployee: isFounder || isRecruiter,
+        canInviteEmployee: isFounder || isRecruiter || isManager || isTeamLead,
         canViewApplications: isFounder || isRecruiter,
         canManageSettings: isFounder,
         canEditCompany: isFounder,
@@ -338,7 +357,7 @@ function CompanyDashboard({ company }: { company: Company }) {
                                 </Badge>
                             )}
                             <Badge className={`gap-1 text-[11px] h-5 px-1.5 font-medium ${roleConfig.badgeClass}`}>
-                                <RoleIcon className="h-2.5 w-2.5" /> {roleConfig.label}
+                                <RoleIcon className="h-2.5 w-2.5" /> {user?.role}
                             </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground max-w-lg line-clamp-1">
@@ -410,8 +429,8 @@ function CompanyDashboard({ company }: { company: Company }) {
 
                 {(perms.isEmployee || perms.isRecruiter) && (
                     <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] ${perms.isEmployee
-                            ? "bg-muted/40 border text-muted-foreground"
-                            : "bg-blue-500/5 border border-blue-500/15 text-muted-foreground"
+                        ? "bg-muted/40 border text-muted-foreground"
+                        : "bg-blue-500/5 border border-blue-500/15 text-muted-foreground"
                         }`}>
                         {perms.isEmployee ? <Shield className="h-3 w-3 shrink-0" /> : <BadgeCheck className="h-3 w-3 shrink-0 text-blue-400" />}
                         {perms.isEmployee
@@ -520,7 +539,7 @@ function CompanyDashboard({ company }: { company: Company }) {
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold truncate leading-tight">{user?.fullName ?? "—"}</p>
+                                    <p className="text-xs font-semibold truncate leading-tight">{user?.fullName}</p>
                                     <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user?.email}</p>
                                 </div>
                                 <Badge className={`gap-1 text-[11px] h-5 px-2 font-medium shrink-0 ${roleConfig.badgeClass}`}>

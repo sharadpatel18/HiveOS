@@ -13,6 +13,9 @@ import {
   IconSettings,
   IconUsers,
   IconUserPlus,
+  IconListCheck,
+  IconUsersGroup,
+  IconClipboardList,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -32,10 +35,11 @@ import { useAuthStore } from "@/store/auth-store"
 import { useCompany } from "@/hooks/use-company"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { Role } from "@/types/role"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type UserRole = "FOUNDER" | "RECRUITER" | "EMPLOYEE" | "USER"
+type UserRole = Role
 
 function getEffectiveRole(
   memberRole?: string,
@@ -54,6 +58,9 @@ const ROLE_META: Record<UserRole, { label: string; className: string }> = {
   RECRUITER: { label: "Recruiter", className: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
   EMPLOYEE: { label: "Employee", className: "text-slate-400 bg-slate-500/10 border-slate-500/20" },
   USER: { label: "Viewer", className: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20" },
+  MANAGER: { label: "Manager", className: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  TEAMLEAD: { label: "Team Lead", className: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  SUPERADMIN: { label: "Super Admin", className: "text-red-400 bg-red-500/10 border-red-500/20" },
 }
 
 // ─── Click-based active state (persisted) ─────────────────────────────────────
@@ -81,10 +88,11 @@ function useActiveNav(defaultKey: string) {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [isMount, setIsMount] = React.useState(false);
+  const [isMount, setIsMount] = React.useState(false)
   const user = useAuthStore((state) => state.user)
   const { data: company } = useCompany()
   const { activeKey, setActiveKey } = useActiveNav("dashboard")
+
   const role = getEffectiveRole(
     company?.memberRole,
     user?.role,
@@ -97,10 +105,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const companyId = company?.id
   const roleMeta = ROLE_META[role] ?? ROLE_META.USER
 
-  // ── Nav data (same shape NavMain/NavSecondary/NavDocuments expect) ────────
-
-  // General nav — always visible
-  const navMain = [
+  // ── 1. General nav ────────────────────────────────────────────────────────
+  // ── 1. General nav ────────────────────────────────────────────────────────
+  const navGeneral = [
     {
       title: "Dashboard",
       url: "/dashboard",
@@ -115,19 +122,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: activeKey === "company",
       onClick: () => setActiveKey("company"),
     },
+    {
+      title: "Overview",
+      url: "/company",
+      icon: IconChartBar,
+      isActive: activeKey === "overview",
+      onClick: () => setActiveKey("overview"),
+    },
   ]
 
-  // Company-scoped nav — only when user belongs to a company
-  // Items that are locked get a disabled flag so NavMain can render them dimmed
-  const navCompany = company && companyId
+  // ── 2. Members ────────────────────────────────────────────────────────────
+  const navMembers = company && companyId
     ? [
-      {
-        title: "Overview",
-        url: "/company",
-        icon: IconChartBar,
-        isActive: activeKey === "overview",
-        onClick: () => setActiveKey("overview"),
-      },
       {
         title: "Members",
         url: `/company/${companyId}/members`,
@@ -139,13 +145,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       },
       {
         title: "Invite Members",
-        url: `/company/${companyId}/members`,   // same page, different section
+        url: `/company/${companyId}/members`,
         icon: IconUserPlus,
         isActive: activeKey === "invite-members",
         onClick: () => setActiveKey("invite-members"),
         disabled: isEmployee || role === "USER",
         disabledReason: "Only founders and recruiters can invite",
       },
+    ]
+    : []
+
+  // ── 3. Team Management ────────────────────────────────────────────────────
+  const navTeams = company && companyId
+    ? [
+      {
+        title: "Teams",
+        url: `/teams`,
+        icon: IconUsersGroup,
+        isActive: activeKey === "teams",
+        onClick: () => setActiveKey("teams"),
+        disabled: isEmployee || role === "USER",
+        disabledReason: "Only founders and managers can view",
+      },
+    ]
+    : []
+
+  // ── 4. Task Management ────────────────────────────────────────────────────
+  const navTasks = company && companyId
+    ? [
+      {
+        title: "My Tasks",
+        url: `/company/${companyId}/tasks`,
+        icon: IconListCheck,
+        isActive: activeKey === "my-tasks",
+        onClick: () => setActiveKey("my-tasks"),
+      },
+      {
+        title: "All Tasks",
+        url: `/company/${companyId}/tasks/all`,
+        icon: IconClipboardList,
+        isActive: activeKey === "all-tasks",
+        onClick: () => setActiveKey("all-tasks"),
+        disabled: isEmployee || role === "USER",
+        disabledReason: "Only managers and above can view all tasks",
+      },
+    ]
+    : []
+
+  // ── 5. Applications & Settings ────────────────────────────────────────────
+  const navApplications = company && companyId
+    ? [
       {
         title: "Applications",
         url: `/company/${companyId}/applications`,
@@ -154,28 +203,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         onClick: () => setActiveKey("applications"),
         disabled: isEmployee || role === "USER",
         disabledReason: "Only founders and recruiters can view",
-      },
-      {
-        title: "Post a Job",
-        url: `/company/${companyId}/jobs/new`,
-        icon: IconBriefcase,
-        isActive: activeKey === "post-job",
-        onClick: () => setActiveKey("post-job"),
-        disabled: !isFounder,
-        disabledReason: "Only founders can post jobs",
-      },
-      {
-        title: "Settings",
-        url: `/company/${companyId}/settings`,
-        icon: IconSettings,
-        isActive: activeKey === "settings",
-        onClick: () => setActiveKey("settings"),
-        disabled: !isFounder,
-        disabledReason: "Only founders can access settings",
-      },
+      }
     ]
     : []
 
+  // ── Secondary nav ─────────────────────────────────────────────────────────
   const navSecondary = [
     {
       title: "Settings",
@@ -198,22 +230,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setIsMount(true)
   }, [])
 
-  if (!isMount) {
-    return null
-  }
+  if (!isMount) return null
+
+  const companyLabel = (
+    <span className="flex items-center justify-between gap-2 w-full pr-1">
+      <span className="truncate">{company?.name}</span>
+      <Badge className={cn("text-[10px] h-4 px-1.5 font-medium shrink-0", roleMeta.className)}>
+        {roleMeta.label}
+      </Badge>
+    </span>
+  )
 
   return (
-    // ✅ Exact same Sidebar shell as original shadcn
     <Sidebar collapsible="offcanvas" {...props}>
 
-      {/* ── Header — unchanged structure ── */}
+      {/* ── Header ── */}
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
+            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href="/dashboard" onClick={() => setActiveKey("dashboard")}>
                 <IconInnerShadowTop className="!size-5" />
                 <span className="text-base font-semibold">GrowWithMe.</span>
@@ -223,53 +258,84 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* ── Content — same structure, your data instead of placeholder ── */}
+      {/* ── Content ── */}
       <SidebarContent>
 
-        {/* General nav — Dashboard + Company (Quick Create only here) */}
-        <NavMain items={navMain} showQuickCreate />
+        {/* General */}
+        <NavMain items={navGeneral} showQuickCreate />
 
-        {/* Company nav — only renders when user has a company */}
-        {company && companyId && (
-          <NavMain
-            items={navCompany}
-            // Pass company name + role badge as the group label
-            label={
+        {company && companyId ? (
+          <>
+            {/* Section 1 — General
+            <NavMain items={navGeneral} label="General" showQuickCreate /> */}
+
+            {/* Section 2 — Members */}
+            <NavMain items={navMembers} label={
               <span className="flex items-center justify-between gap-2 w-full pr-1">
-                <span className="truncate">{company.name}</span>
+                <span className="truncate">Members</span>
                 <Badge className={cn("text-[10px] h-4 px-1.5 font-medium shrink-0", roleMeta.className)}>
                   {roleMeta.label}
                 </Badge>
               </span>
-            }
-          />
-        )}
+            } />
 
-        {/* No company prompt — shown instead of company nav */}
-        {!company && (
-          <div className="px-3 py-2">
-            <div className="px-3 py-3 rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/20 space-y-1.5">
-              <p className="text-xs font-medium">No company yet</p>
-              <p className="text-[11px] text-sidebar-foreground/50 leading-relaxed">
-                Create or join a company to unlock team features.
-              </p>
-              <Link
-                href="/company"
-                onClick={() => setActiveKey("company")}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-sidebar-primary hover:underline"
-              >
-                Get started →
-              </Link>
+            {/* Section 3 — Team Management */}
+            <NavMain
+              items={navTeams}
+              label={
+                <span className="flex items-center justify-between gap-2 w-full pr-1">
+                  <span>Teams</span>
+                </span>
+              }
+            />
+
+            {/* Section 4 — Task Management */}
+            <NavMain
+              items={navTasks}
+              label={
+                <span className="flex items-center justify-between gap-2 w-full pr-1">
+                  <span>Tasks</span>
+                </span>
+              }
+            />
+
+            <NavMain
+              items={navApplications}
+              label={
+                <span className="flex items-center justify-between gap-2 w-full pr-1">
+                  <span>Applications</span>
+                </span>
+              }
+            />
+          </>
+        ) : (
+          <>
+            {/* General nav shown even without company */}
+            <NavMain items={navGeneral} label="General" showQuickCreate />
+
+            <div className="px-3 py-2">
+              <div className="px-3 py-3 rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/20 space-y-1.5">
+                <p className="text-xs font-medium">No company yet</p>
+                <p className="text-[11px] text-sidebar-foreground/50 leading-relaxed">
+                  Create or join a company to unlock team features.
+                </p>
+                <Link
+                  href="/company"
+                  onClick={() => setActiveKey("company")}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-sidebar-primary hover:underline"
+                >
+                  Get started →
+                </Link>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
-        {/* Secondary nav — Settings, Help, Search — pinned to bottom */}
         <NavSecondary items={navSecondary} className="mt-auto" />
 
       </SidebarContent>
 
-      {/* ── Footer — unchanged structure ── */}
+      {/* ── Footer ── */}
       <SidebarFooter>
         <NavUser
           user={

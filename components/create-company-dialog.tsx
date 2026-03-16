@@ -73,7 +73,7 @@ export default function CreateCompanyDialog({
             setLoading(true)
             const res = await createCompany(payload);
         } catch (err) {
-            console.error(err)
+            console.log(err)
         } finally {
             setLoading(false)
         }

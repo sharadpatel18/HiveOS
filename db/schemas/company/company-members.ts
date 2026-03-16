@@ -6,8 +6,8 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
-import { users } from "./user";
-import { company } from "./company";
+import { users } from "../user/user";
+import { company } from "../company/company";
 
 export const companyMembers = pgTable(
   "company_members",

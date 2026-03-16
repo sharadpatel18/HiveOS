@@ -1,5 +1,5 @@
 import db from "@/db";
-import { companyMembers } from "@/db/schemas/company-members";
+import { companyMembers } from "@/db/schemas/company/company-members";
 import { withAuth } from "@/lib/withAuth";
 import { companyMembersValidation } from "@/validations/company.validation";
 import { eq } from "drizzle-orm";

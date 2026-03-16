@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import { ICompany } from "@/types/company";
+import { toast } from "sonner";
 
 interface ApiErrorResponse {
   message: string;
@@ -32,19 +33,6 @@ export const getCompanyByUserId = async () => {
 export const createCompany = async (data: ICompany) => {
   try {
     const response = await axios.post("/api/company", data);
-    return response.data;
-  } catch (error) {
-    const err = error as AxiosError<ApiErrorResponse>;
-    if (err.response?.data?.message) {
-      throw new Error(err.response.data.message);
-    }
-    throw new Error("Something went wrong. Please try again.");
-  }
-};
-
-export const getCompanyMembersById = async (id: string) => {
-  try {
-    const response = await axios.get(`/api/company/members/${id}`);
     return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
@@ -93,6 +81,20 @@ export const joinCompanyReq = async (data: IJoin) => {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
       throw new Error(err.response.data.message);
+    }
+    throw new Error("Something went wrong. Please try again.");
+  }
+};
+
+export const searchUserByEmail = async (email: string) => {
+  try {
+    const response = await axios.get(`/api/company/search?email=${email}`);
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError<ApiErrorResponse>;
+    if (err.response?.data?.message) {
+      // throw new Error(err.response.data.message);
+      toast.error(err.response.data.message);
     }
     throw new Error("Something went wrong. Please try again.");
   }

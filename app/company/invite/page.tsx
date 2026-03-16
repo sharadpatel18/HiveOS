@@ -19,7 +19,7 @@ type InviteStatus = "loading" | "valid" | "accepting" | "accepted" | "invalid" |
 interface Invite {
     id: string;
     email: string;
-    role: "FOUNDER" | "RECRUITER" | "EMPLOYEE";
+    role: "FOUNDER" | "RECRUITER" | "EMPLOYEE" | "TEAMLEAD" | "MANAGER";
 
     company: {
         id: string;
@@ -56,6 +56,16 @@ const ROLE_META: Record<string, { label: string; color: string; icon: React.Elem
         label: "Founder",
         color: "bg-amber-100 text-amber-800 border-amber-200",
         icon: Crown,
+    },
+    TEAMLEAD: {
+        label: "Team Lead",
+        color: "bg-amber-100 text-amber-800 border-amber-200",
+        icon: MailCheck,
+    },
+    MANAGER: {
+        label: "Manager",
+        color: "bg-amber-100 text-amber-800 border-amber-200",
+        icon: MoveRight,
     },
 }
 

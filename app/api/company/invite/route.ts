@@ -20,6 +20,10 @@ export async function POST(req: Request) {
       .from(users)
       .where(eq(users.email, email));
 
+    if (invitedUser.length === 0)
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // 2️⃣ Check if user is member
     const member = await db
       .select()
       .from(companyMembers)
@@ -34,7 +38,7 @@ export async function POST(req: Request) {
         { status: 403 },
       );
 
-    if (!ROLE_GROUPS.CAN_INVITE_EMPLOYEES.includes(role.toUpperCase())) {
+    if (!ROLE_GROUPS.CAN_INVITE_EMPLOYEES.includes(auth.role.toUpperCase())) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
     // 3️⃣ Prevent duplicate invite
