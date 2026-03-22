@@ -26,6 +26,8 @@ import Link from "next/link"
 import { createTeam } from "@/services/teams-services"
 import { cn } from "@/lib/utils"
 import { useTeams } from "@/hooks/use-teams"
+import type { Team } from "@/types/teams"
+import { redirect } from "next/navigation"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CAN_CREATE_TEAM = ["FOUNDER", "MANAGER"]
@@ -60,16 +62,7 @@ type Company = {
     members: Member[]
 }
 
-type Team = {
-    id: string
-    name: string
-    slug: string
-    description: string | null
-    teamleadId: string
-    personalTeam: boolean
-    createdAt: string
-    updatedAt: string
-}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function slugify(value: string) {
@@ -361,9 +354,10 @@ function TeamCard({ team, canManage, onEdit, onDelete, onAddMember }: {
     onEdit: (team: Team) => void
     onDelete: (team: Team) => void
     onAddMember: (team: Team) => void
+    onClick?: () => void
 }) {
     return (
-        <div className="group relative flex flex-col gap-4 rounded-xl border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30">
+        <div className="group relative flex flex-col gap-4 rounded-xl border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30" onClick={() => redirect(`/teams/${team.id}/dashboard`)}>
             <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
@@ -463,6 +457,11 @@ function TeamsDashboard({ company, teams, loadingTeams }: {
         toast.info(`Add member to "${team.name}"`)
     }
 
+    const handleRedirect = (team: Team) => {
+        // TODO: redirect to team dashboard
+        toast.info(`Redirect to "${team.name}" dashboard`)
+    }
+
     return (
         <div className="flex flex-col gap-6 p-6">
             {/* Company Banner */}
@@ -527,6 +526,7 @@ function TeamsDashboard({ company, teams, loadingTeams }: {
                             onEdit={setEditTarget}
                             onDelete={handleDelete}
                             onAddMember={handleAddMember}
+                            onClick={() => handleRedirect(team)}
                         />
                     ))}
                 </div>

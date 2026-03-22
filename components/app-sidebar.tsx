@@ -391,7 +391,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ) : (
           <>
             {/* General nav shown even without company */}
-            <NavMain items={navGeneral} label="General" showQuickCreate />
 
             <div className="px-3 py-2">
               <div className="px-3 py-3 rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/20 space-y-1.5">
