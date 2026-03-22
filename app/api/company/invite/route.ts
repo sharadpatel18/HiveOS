@@ -11,7 +11,7 @@ import { companyInviteTemplate } from "@/lib/email/templates";
 export async function POST(req: Request) {
   try {
     const auth: any = await withAuth(req);
-    if ("error" in auth) return auth.error;
+    if ("error" in auth) return auth.error as Response;
 
     const { companyId, email, role } = await req.json();
 

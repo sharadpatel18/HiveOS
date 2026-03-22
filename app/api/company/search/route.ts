@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const results = await withAuth(request);
-    if ("error" in results) return results.error;
+    if ("error" in results) return results.error as Response;
 
     const email = request.nextUrl.searchParams.get("email");
 

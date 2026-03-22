@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const auth: any = await withAuth(request);
-    if ("error" in auth) return auth.error;
+    if ("error" in auth) return auth.error as Response;
 
     const { id } = await params;
     console.log(id);
