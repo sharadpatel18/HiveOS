@@ -9,4 +9,10 @@ export const teamValidation = z.object({
   companyId: z.string().nonempty("Company ID is required"),
 });
 
+export const teamMembersValidation = z.object({
+  teamId: z.string().nonempty("Team ID is required"),
+  userId: z.string().nonempty("User ID is required"),
+  role: z.string().nonempty("Role is required"),
+});
+
 export type Team = z.infer<typeof teamValidation>;

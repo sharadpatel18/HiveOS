@@ -41,3 +41,48 @@ export const getTeams = async () => {
     throw new Error("Something went wrong. Please try again.");
   }
 };
+
+export const getTeamsById = async (id: string) => {
+  try {
+    console.log(id);
+    const response = await Axios.get(`/api/teams/${id}`);
+    console.log(response.data);
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError<ApiErrorResponse>;
+    if (err.response?.data?.message) {
+      throw new Error(err.response.data.message);
+    }
+    throw new Error("Something went wrong. Please try again.");
+  }
+};
+
+export const addTeamMember = async (data: {
+  userId: string;
+  teamId: string;
+  role: string;
+}) => {
+  try {
+    const response = await Axios.post("/api/teams/members", data);
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError<ApiErrorResponse>;
+    if (err.response?.data?.message) {
+      throw new Error(err.response.data.message);
+    }
+    throw new Error("Something went wrong. Please try again.");
+  }
+};
+
+export const getTeamMembersByEmail = async (email: string) => {
+  try {
+    const response = await Axios.get(`/api/teams/members?email=${email}`);
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError<ApiErrorResponse>;
+    if (err.response?.data?.message) {
+      throw new Error(err.response.data.message);
+    }
+    throw new Error("Something went wrong. Please try again.");
+  }
+};
