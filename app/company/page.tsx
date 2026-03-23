@@ -24,6 +24,7 @@ import { useCompany } from "@/hooks/use-company"
 import { useAuthStore } from "@/store/auth-store"
 import Link from "next/link"
 import { Role } from "@/types/role"
+import { useState } from "react"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,11 @@ function CompanyLoadingSkeleton() {
 // ─── No Company State ─────────────────────────────────────────────────────────
 
 function NoCompanyState() {
+    const [open, setOpen] = useState(false)
+
+    const handleDialog = (value: boolean) => {
+        setOpen(value)
+    }
     return (
         <div className="mx-auto max-w-lg px-6 py-24 text-center space-y-6 w-full">
             <div className="mx-auto h-14 w-14 rounded-2xl border border-dashed border-primary/30 flex items-center justify-center bg-primary/5">
@@ -177,8 +183,8 @@ function NoCompanyState() {
                     Manage recruiters, post jobs, and control your organization from one place.
                 </p>
             </div>
-            <CreateCompanyDialog>
-                <Button size="sm" className="gap-2 px-6">
+            <CreateCompanyDialog open={open} setOpen={handleDialog}>
+                <Button size="sm" className="gap-2 px-6" onClick={() => setOpen(true)}>
                     Create company <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
             </CreateCompanyDialog>

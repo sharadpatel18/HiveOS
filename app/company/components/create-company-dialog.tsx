@@ -23,6 +23,7 @@ import {
 import { useAuthStore } from "@/store/auth-store"
 import { createCompany } from "@/services/company-service"
 import { ICompany } from "@/types/company"
+import { toast } from "sonner"
 
 // helper to create slug
 const toSlug = (text: string) =>
@@ -34,12 +35,15 @@ const toSlug = (text: string) =>
 
 export default function CreateCompanyDialog({
     children,
+    setOpen,
+    open
 }: {
-    children: React.ReactNode
+    children: React.ReactNode,
+    setOpen: (open: boolean) => void,
+    open: boolean
 }) {
     const user = useAuthStore((state) => state.user)
     const [loading, setLoading] = useState(false)
-
     const [formData, setFormData] = useState({
         name: "",
         description: "",
@@ -72,15 +76,21 @@ export default function CreateCompanyDialog({
         try {
             setLoading(true)
             const res = await createCompany(payload);
+
+            if (res) {
+                toast.success("Company created successfully")
+                setOpen(false)
+            }
         } catch (err) {
             console.log(err)
+            toast.error("Failed to create company")
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <Dialog>
+        <Dialog open={open}>
             <DialogTrigger asChild>{children}</DialogTrigger>
 
             <DialogContent className="sm:max-w-lg">

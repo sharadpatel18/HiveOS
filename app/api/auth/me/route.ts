@@ -4,12 +4,12 @@ import { withAuth } from "@/lib/withAuth";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET(request: Request): Promise<Response> {
   try {
-    const results: any = await withAuth(request);
+    const results = await withAuth(request); // ✅ no "any" needed now
     if ("error" in results) return results.error;
 
-    const findUser = await db
+    const [user] = await db
       .select({
         id: users.id,
         fullName: users.name,
@@ -19,8 +19,16 @@ export async function GET(request: Request) {
       .from(users)
       .where(eq(users.id, results.user.id));
 
-    return NextResponse.json(findUser[0], { status: 200 });
+    if (!user) {
+      return NextResponse.json(
+        { message: "User not found", success: false },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(user, { status: 200 });
   } catch (error) {
+    console.log(error);
     return NextResponse.json(
       { message: "Internal server error", success: false },
       { status: 500 },

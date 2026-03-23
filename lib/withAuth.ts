@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { verifyToken } from "./auth";
+import { verifyToken, VerifiedUser } from "./auth"; // ✅ import VerifiedUser directly
 
-type AuthSuccess<T> = { user: T };
+type AuthSuccess = { user: VerifiedUser };
 type AuthError = { error: NextResponse };
-export type AuthResult<T> = AuthSuccess<T> | AuthError;
+export type AuthResult = AuthSuccess | AuthError; // ✅ no generic needed
 
-export async function withAuth(
-  request: Request,
-): Promise<AuthResult<ReturnType<typeof verifyToken>>> {
+export async function withAuth(request: Request): Promise<AuthResult> {
   const cookieHeader = request.headers.get("cookie") || "";
 
   const token = cookieHeader
@@ -25,7 +23,7 @@ export async function withAuth(
   }
 
   try {
-    const user = verifyToken(token);
+    const user = await verifyToken(token); // ✅ await added
     return { user };
   } catch (err) {
     console.error("[withAuth] Token verification failed:", err);

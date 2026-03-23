@@ -49,7 +49,6 @@ export const getUserData = async () => {
     const response = await axios.get("/api/auth/me", {
       withCredentials: true,
     });
-
     return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;

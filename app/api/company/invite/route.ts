@@ -41,6 +41,7 @@ export async function POST(req: Request) {
     if (
       !ROLE_GROUPS.CAN_INVITE_EMPLOYEES.includes(auth.user.role.toUpperCase())
     ) {
+      console.log(auth.user.role);
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
     // 3️⃣ Prevent duplicate invite

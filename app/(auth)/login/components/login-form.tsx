@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"                          // ✅ removed useEffect
+import { useEffect, useState } from "react"                          // ✅ removed useEffect
 import { toast } from "sonner"
 import { getUserData, loginUser } from "@/services/auth-services"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -18,7 +18,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
   const setUser = useAuthStore.getState().setUser;
   const redirect = searchParams.get("redirect")
   const [formData, setFormData] = useState({ email: "", password: "" })
-
+  const [isMount, setIsMount] = useState(false)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value })
   }
@@ -36,6 +36,14 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
     } catch (error) {
       toast.error(`Something went wrong ${error}`);
     }
+  }
+
+  useEffect(() => {
+    setIsMount(true)
+  }, [])
+
+  if (!isMount) {
+    return null
   }
 
   return (
