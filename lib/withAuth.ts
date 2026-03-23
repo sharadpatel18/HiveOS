@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyToken } from "./auth";
 
-export async function withAuth(request: Request) {
+type AuthSuccess<T> = { user: T };
+type AuthError = { error: NextResponse };
+export type AuthResult<T> = AuthSuccess<T> | AuthError;
+
+export async function withAuth(
+  request: Request,
+): Promise<AuthResult<ReturnType<typeof verifyToken>>> {
   const cookieHeader = request.headers.get("cookie") || "";
 
   const token = cookieHeader
@@ -10,17 +16,24 @@ export async function withAuth(request: Request) {
     ?.split("=")[1];
 
   if (!token) {
-    return NextResponse.json(
-      { message: "Unauthorized", success: false },
-      { status: 401 },
-    );
+    return {
+      error: NextResponse.json(
+        { message: "Unauthorized", success: false },
+        { status: 401 },
+      ),
+    };
   }
 
   try {
     const user = verifyToken(token);
-    return user;
+    return { user };
   } catch (err) {
     console.error("[withAuth] Token verification failed:", err);
-    throw err;
+    return {
+      error: NextResponse.json(
+        { message: "Unauthorized", success: false },
+        { status: 401 },
+      ),
+    };
   }
 }

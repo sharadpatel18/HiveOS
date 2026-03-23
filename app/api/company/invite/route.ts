@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       .select()
       .from(companyMembers)
       .where(
-        eq(companyMembers.userId, auth.id) &&
+        eq(companyMembers.userId, auth.user.id) &&
           eq(companyMembers.companyId, companyId),
       );
 
@@ -38,7 +38,9 @@ export async function POST(req: Request) {
         { status: 403 },
       );
 
-    if (!ROLE_GROUPS.CAN_INVITE_EMPLOYEES.includes(auth.role.toUpperCase())) {
+    if (
+      !ROLE_GROUPS.CAN_INVITE_EMPLOYEES.includes(auth.user.role.toUpperCase())
+    ) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
     // 3️⃣ Prevent duplicate invite
@@ -68,7 +70,7 @@ export async function POST(req: Request) {
       email,
       role,
       token,
-      invitedBy: auth.id,
+      invitedBy: auth.user.id,
       expiresAt,
     });
 
@@ -129,7 +131,7 @@ export async function GET(req: Request) {
       .from(companyInvites)
       .leftJoin(users, eq(users.id, companyInvites.invitedBy))
       .leftJoin(company, eq(company.id, companyInvites.companyId))
-      .where(eq(companyInvites.userId, auth.id));
+      .where(eq(companyInvites.userId, auth.user.id));
 
     return NextResponse.json(invites);
   } catch (error) {

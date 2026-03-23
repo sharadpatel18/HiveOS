@@ -20,7 +20,7 @@ export async function DELETE(
       );
     }
 
-    if (auth.role !== "FOUNDER" && auth.role !== "MANAGER") {
+    if (auth.user.role !== "FOUNDER" && auth.user.role !== "MANAGER") {
       return NextResponse.json(
         {
           message: "You are not authorized to delete this team member",

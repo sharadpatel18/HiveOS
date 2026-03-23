@@ -6,7 +6,7 @@ import {
   companyMembersValidation,
   companyValidation,
 } from "@/validations/company.validation";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const auth: any = await withAuth(request);
     if ("error" in auth) return auth.error as Response;
 
-    const userId = auth.id;
+    const userId = auth.user.id;
     const body = await request.json();
 
     const validateSchema = companyValidation.safeParse(body);
@@ -104,9 +104,11 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const auth: any = await withAuth(request);
-    if ("error" in auth) return auth.error;
+    if ("error" in auth) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+    }
 
-    const userId = auth.id;
+    const userId = auth.user.id;
 
     // 1. Get company + user's role
     const [companyData] = await db

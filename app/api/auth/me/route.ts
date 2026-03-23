@@ -17,7 +17,7 @@ export async function GET(request: Request) {
         role: users.role,
       })
       .from(users)
-      .where(eq(users.id, results.id));
+      .where(eq(users.id, results.user.id));
 
     return NextResponse.json(findUser[0], { status: 200 });
   } catch (error) {

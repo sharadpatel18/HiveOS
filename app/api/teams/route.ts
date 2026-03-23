@@ -116,7 +116,7 @@ export async function GET(request: Request) {
         companyId: companyMembers.companyId,
       })
       .from(companyMembers)
-      .where(eq(companyMembers.userId, auth.id));
+      .where(eq(companyMembers.userId, auth.user.id));
 
     const companyId = findCompanyId[0]?.companyId ?? null;
 

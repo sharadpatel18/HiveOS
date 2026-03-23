@@ -51,13 +51,16 @@ export async function POST(request: Request) {
       .where(eq(companyInvites.id, id));
 
     await db.insert(companyMembers).values({
-      userId: auth.id,
+      userId: auth.user.id,
       companyId: requestInvite[0].companyId,
       role,
       hiredBy: requestInvite[0].invitedBy,
     });
 
-    await db.update(users).set({ role: role }).where(eq(users.id, auth.id));
+    await db
+      .update(users)
+      .set({ role: role })
+      .where(eq(users.id, auth.user.id));
     return NextResponse.json({ message: "Invite accepted", success: true });
   } catch (error) {
     return NextResponse.json(

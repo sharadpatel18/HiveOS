@@ -4,10 +4,10 @@ import { withAuth } from "@/lib/withAuth";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     const results = await withAuth(request);
-    if ("error" in results) return results.error as Response;
+    if ("error" in results) return results.error; // ✅ no cast needed anymore
 
     const email = request.nextUrl.searchParams.get("email");
 

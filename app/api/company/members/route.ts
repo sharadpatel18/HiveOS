@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     if ("error" in auth) return auth.error as Response;
 
-    const { id: userId } = auth;
+    const { id: userId } = auth.user;
     const body = await request.json();
 
     const validateSchema = companyMembersValidation.safeParse(body);

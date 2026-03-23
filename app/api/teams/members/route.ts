@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const requesterCompany = await db
       .select()
       .from(companyMembers)
-      .where(eq(companyMembers.userId, auth.userId));
+      .where(eq(companyMembers.userId, auth.user.userId));
 
     if (requesterCompany.length === 0) {
       return NextResponse.json(
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     const requesterCompany = await db
       .select()
       .from(companyMembers)
-      .where(eq(companyMembers.userId, auth.userId));
+      .where(eq(companyMembers.userId, auth.user.userId));
 
     if (requesterCompany.length === 0) {
       return NextResponse.json(
