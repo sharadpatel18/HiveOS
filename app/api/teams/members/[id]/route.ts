@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const auth: any = await withAuth(request);
@@ -41,7 +41,7 @@ export async function DELETE(
         { status: 404 },
       );
     }
-    
+
     await db.delete(teamMembers).where(eq(teamMembers.id, id));
 
     return NextResponse.json({ message: "Team Member deleted", success: true });
