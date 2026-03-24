@@ -55,7 +55,7 @@ import { Label } from "@/components/ui/label"
 import { Users, UserCheck, Briefcase, Search, UserPlus, Crown, UserX, MoveRight, MailCheck } from "lucide-react"
 
 import { inviteUserToCompany, searchUserByEmail } from "@/services/company-service"
-import { useAuthStore } from "@/store/auth-store"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { useCompany } from "@/hooks/use-company"
 
@@ -454,13 +454,14 @@ export default function MembersPage() {
     const [loading, setLoading] = useState(true)
     const [inviteOpen, setInviteOpen] = useState(false)
     const { data: company } = useCompany()
-    const { user } = useAuthStore()
-    const currentRole = user?.role?.toUpperCase()
+    const { data: session, status } = useSession()
+    const currentRole = session?.user?.role?.toUpperCase()
     const isFounder = currentRole === "FOUNDER"
     const isRecruiter = currentRole === "RECRUITER"
     const isManager = currentRole === "MANAGER"
     const isTeamLead = currentRole === "TEAMLEAD"
-    const canInvite = isFounder || isRecruiter || isManager || isTeamLead
+    const isEmployee = currentRole === "EMPLOYEE"
+    const canInvite = isFounder || isRecruiter || isManager || isTeamLead || isEmployee
 
     useEffect(() => {
         if (!companyId) return
@@ -486,6 +487,15 @@ export default function MembersPage() {
     const teamLeads = members.filter((m) => m.role?.toUpperCase() === "TEAMLEAD")
     const employees = members.filter((m) => m.role?.toUpperCase() === "EMPLOYEE")
 
+    if (status === "loading") {
+        {
+            loading && (
+                <div className="flex flex-1 flex-col items-center justify-center">
+                    <Skeleton className="w-1/2 h-1/2" />
+                </div>
+            )
+        }
+    }
     return (
         <SidebarProvider
             style={

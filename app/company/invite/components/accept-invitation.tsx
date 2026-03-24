@@ -2,18 +2,24 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CheckCircle2, XCircle, Clock, Building2, UserCheck, Briefcase, Crown, MailCheck, MoveRight, ShieldAlert } from "lucide-react"
+import {
+    CheckCircle2, XCircle, Clock, Building2,
+    UserCheck, Briefcase, Crown, MailCheck,
+    MoveRight, ShieldAlert
+} from "lucide-react"
 import { getInvitationById, joinCompanyReq } from "@/services/company-service"
 
 // ---- Types ----------------------------------------------------------------
 
-type InviteStatus = "loading" | "valid" | "accepting" | "accepted" | "invalid" | "expired"
+type InviteStatus = "loading" | "valid" | "accepting" | "accepted" | "invalid" | "expired" | "wrong_user"
+
 interface Invite {
     id: string;
     email: string;
@@ -38,31 +44,11 @@ interface Invite {
 // ---- Helpers ---------------------------------------------------------------
 
 const ROLE_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-    RECRUITER: {
-        label: "Recruiter",
-        color: "bg-violet-100 text-violet-800 border-violet-200",
-        icon: UserCheck,
-    },
-    EMPLOYEE: {
-        label: "Employee",
-        color: "bg-sky-100 text-sky-800 border-sky-200",
-        icon: Briefcase,
-    },
-    FOUNDER: {
-        label: "Founder",
-        color: "bg-amber-100 text-amber-800 border-amber-200",
-        icon: Crown,
-    },
-    TEAMLEAD: {
-        label: "Team Lead",
-        color: "bg-amber-100 text-amber-800 border-amber-200",
-        icon: MailCheck,
-    },
-    MANAGER: {
-        label: "Manager",
-        color: "bg-amber-100 text-amber-800 border-amber-200",
-        icon: MoveRight,
-    },
+    RECRUITER: { label: "Recruiter", color: "bg-violet-100 text-violet-800 border-violet-200", icon: UserCheck },
+    EMPLOYEE: { label: "Employee", color: "bg-sky-100 text-sky-800 border-sky-200", icon: Briefcase },
+    FOUNDER: { label: "Founder", color: "bg-amber-100 text-amber-800 border-amber-200", icon: Crown },
+    TEAMLEAD: { label: "Team Lead", color: "bg-amber-100 text-amber-800 border-amber-200", icon: MailCheck },
+    MANAGER: { label: "Manager", color: "bg-amber-100 text-amber-800 border-amber-200", icon: MoveRight },
 }
 
 // ---- Sub-components --------------------------------------------------------
@@ -93,9 +79,9 @@ function AcceptedState({ companyName, router }: { companyName: string; router: R
                 <CheckCircle2 className="h-8 w-8 text-emerald-600" />
             </div>
             <div className="space-y-1">
-                <h2 className="text-xl font-bold tracking-tight">You're in!</h2>
+                <h2 className="text-xl font-bold tracking-tight">You&apos;re in!</h2>
                 <p className="text-sm text-muted-foreground">
-                    You've successfully joined <span className="font-medium text-foreground">{companyName}</span>.
+                    You&apos;ve successfully joined <span className="font-medium text-foreground">{companyName}</span>.
                 </p>
             </div>
             <Alert className="text-left border-emerald-200 bg-emerald-50 text-emerald-800">
@@ -112,11 +98,14 @@ function AcceptedState({ companyName, router }: { companyName: string; router: R
     )
 }
 
-function InvalidState({ reason }: { reason: "invalid" | "expired" }) {
+function InvalidState({ reason }: { reason: "invalid" | "expired" | "wrong_user" }) {
     const isExpired = reason === "expired"
+    const isWrongUser = reason === "wrong_user"
+
     return (
         <div className="flex flex-col items-center gap-5 py-4 text-center">
-            <div className={`flex items-center justify-center h-16 w-16 rounded-full ${isExpired ? "bg-amber-100" : "bg-red-100"}`}>
+            <div className={`flex items-center justify-center h-16 w-16 rounded-full ${isExpired ? "bg-amber-100" : "bg-red-100"
+                }`}>
                 {isExpired
                     ? <Clock className="h-8 w-8 text-amber-600" />
                     : <XCircle className="h-8 w-8 text-red-600" />
@@ -124,20 +113,27 @@ function InvalidState({ reason }: { reason: "invalid" | "expired" }) {
             </div>
             <div className="space-y-1">
                 <h2 className="text-xl font-bold tracking-tight">
-                    {isExpired ? "Invitation Expired" : "Invalid Invitation"}
+                    {isExpired ? "Invitation Expired" : isWrongUser ? "Wrong Account" : "Invalid Invitation"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                     {isExpired
                         ? "This invitation link has expired. Please ask the sender to resend it."
-                        : "This invitation link is invalid or has already been used."}
+                        : isWrongUser
+                            ? "This invitation was sent to a different email address. Please log in with the correct account."
+                            : "This invitation link is invalid or has already been used."}
                 </p>
             </div>
-            <Alert className={`text-left ${isExpired ? "border-amber-200 bg-amber-50 text-amber-800" : "border-red-200 bg-red-50 text-red-800"}`}>
+            <Alert className={`text-left ${isExpired
+                ? "border-amber-200 bg-amber-50 text-amber-800"
+                : "border-red-200 bg-red-50 text-red-800"
+                }`}>
                 <ShieldAlert className="h-4 w-4" />
                 <AlertDescription>
                     {isExpired
                         ? "Invitation links are valid for 7 days after they are sent."
-                        : "If you believe this is a mistake, please contact the person who invited you."}
+                        : isWrongUser
+                            ? "Please sign out and log in with the email address this invitation was sent to."
+                            : "If you believe this is a mistake, please contact the person who invited you."}
                 </AlertDescription>
             </Alert>
         </div>
@@ -149,6 +145,8 @@ function InvalidState({ reason }: { reason: "invalid" | "expired" }) {
 export default function AcceptInvitationPage() {
     const searchParams = useSearchParams()
     const router = useRouter()
+    const { data: session } = useSession()
+
     const token = searchParams.get("token")
 
     const [status, setStatus] = useState<InviteStatus>("loading")
@@ -162,8 +160,25 @@ export default function AcceptInvitationPage() {
 
         async function validateToken() {
             try {
-                const res = await getInvitationById();
-                setInvite(res[0])
+                const res = await getInvitationById()
+
+                if (!res || res.length === 0) {
+                    setStatus("invalid")
+                    return
+                }
+
+                const inviteData: Invite = res[0]
+
+                // ✅ Check if logged in user's email matches invite email
+                if (
+                    session?.user?.email &&
+                    inviteData.email.toLowerCase() !== session.user.email.toLowerCase()
+                ) {
+                    setStatus("wrong_user")
+                    return
+                }
+
+                setInvite(inviteData)
                 setStatus("valid")
             } catch {
                 setStatus("invalid")
@@ -171,7 +186,7 @@ export default function AcceptInvitationPage() {
         }
 
         validateToken()
-    }, [token])
+    }, [token, session]) // ✅ re-run when session changes
 
     const handleAccept = async () => {
         if (!token || !invite) return
@@ -180,13 +195,16 @@ export default function AcceptInvitationPage() {
             const payload = {
                 token,
                 id: invite.id,
-                role: invite.role
+                role: invite.role,
             }
-            const res = await joinCompanyReq(payload);
+            const res = await joinCompanyReq(payload)
             if (res) {
                 setStatus("accepted")
+            } else {
+                setStatus("invalid")
             }
-        } catch {
+        } catch (error) {
+            console.error(error)
             setStatus("invalid")
         }
     }
@@ -198,7 +216,7 @@ export default function AcceptInvitationPage() {
         <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4 py-12">
             <div className="w-full max-w-md space-y-6">
 
-                {/* Logo / Brand */}
+                {/* Brand */}
                 <div className="flex flex-col items-center gap-2 text-center">
                     <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary text-primary-foreground">
                         <Building2 className="h-5 w-5" />
@@ -216,6 +234,7 @@ export default function AcceptInvitationPage() {
                             {status === "accepted" && "Invitation Accepted"}
                             {status === "invalid" && "Invalid Invitation"}
                             {status === "expired" && "Invitation Expired"}
+                            {status === "wrong_user" && "Wrong Account"}
                         </CardTitle>
                         {(status === "valid" || status === "accepting") && (
                             <CardDescription className="text-center">
@@ -231,7 +250,7 @@ export default function AcceptInvitationPage() {
                             <AcceptedState companyName={invite.company.name} router={router} />
                         )}
 
-                        {(status === "invalid" || status === "expired") && (
+                        {(status === "invalid" || status === "expired" || status === "wrong_user") && (
                             <InvalidState reason={status} />
                         )}
 

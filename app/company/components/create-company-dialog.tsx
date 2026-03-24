@@ -20,10 +20,11 @@ import {
     SelectContent,
     SelectItem,
 } from "@/components/ui/select"
-import { useAuthStore } from "@/store/auth-store"
+import { useSession } from "next-auth/react"
 import { createCompany } from "@/services/company-service"
 import { ICompany } from "@/types/company"
 import { toast } from "sonner"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // helper to create slug
 const toSlug = (text: string) =>
@@ -42,13 +43,13 @@ export default function CreateCompanyDialog({
     setOpen: (open: boolean) => void,
     open: boolean
 }) {
-    const user = useAuthStore((state) => state.user)
+    const { data: session, status } = useSession();
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
         name: "",
         description: "",
         size: "",
-        founder: user?.fullName,
+        founder: session?.user?.fullName,
         website: "",
         industry: "",
     })
@@ -70,7 +71,7 @@ export default function CreateCompanyDialog({
             slug: toSlug(formData.name),
             website: formData.website || null,
             industry: formData.industry || null,
-            founder: user?.fullName || "",
+            founder: session?.user?.fullName || "",
         }
 
         try {
@@ -86,6 +87,16 @@ export default function CreateCompanyDialog({
             toast.error("Failed to create company")
         } finally {
             setLoading(false)
+        }
+    }
+
+    if (status === "loading") {
+        {
+            loading && (
+                <div className="flex flex-1 flex-col items-center justify-center">
+                    <Skeleton className="w-1/2 h-1/2" />
+                </div>
+            )
         }
     }
 

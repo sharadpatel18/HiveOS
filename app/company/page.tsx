@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import CreateCompanyDialog from "@/app/company/components/create-company-dialog"
 import { useCompany } from "@/hooks/use-company"
-import { useAuthStore } from "@/store/auth-store"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { Role } from "@/types/role"
 import { useState } from "react"
@@ -109,8 +109,9 @@ const ROLE_CONFIG: Record<string, {
 // ─── Permissions ──────────────────────────────────────────────────────────────
 
 function usePermissions(company: Company | null | undefined) {
-    const user = useAuthStore((s) => s.user)
-    const rawRole = user?.role.toUpperCase() as UserRole
+    const { data: session, status } = useSession()
+    const user = session?.user
+    const rawRole = (user?.role?.toUpperCase() ?? "USER") as UserRole
     const isFounder = rawRole === "FOUNDER" || company?.userId === user?.id
     const isRecruiter = !isFounder && rawRole === "RECRUITER"
     const isManager = !isFounder && !isRecruiter && rawRole === "MANAGER"
@@ -282,7 +283,8 @@ function QuickActionButton({
 
 function CompanyDashboard({ company }: { company: Company }) {
     const perms = usePermissions(company)
-    const user = useAuthStore((s) => s.user)
+    const { data: session, status } = useSession()
+    const user = session?.user
 
     const companyInitials = company.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
     const userInitials = user?.fullName

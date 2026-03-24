@@ -1,44 +1,68 @@
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import db from "@/db";
 import { users } from "@/db/schemas";
 import { eq } from "drizzle-orm";
-import jwt from "jsonwebtoken";
 
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET!;
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
 
-export type VerifiedUser = {
-  id: string;
-  role: string;
-  fullName: string;
-  email: string;
-  exp: number;
-  iat: number;
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, credentials.email))
+          .limit(1);
+
+        if (!user) return null;
+
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password,
+        );
+        if (!isValid) return null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          fullName: user.name,
+          role: user.role,
+        };
+      },
+    }),
+  ],
+
+  session: { strategy: "jwt" },
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        token.fullName = user.fullName;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.fullName = token.fullName as string;
+      }
+      return session;
+    },
+  },
+
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
 };
-
-type JwtPayload = VerifiedUser;
-
-export async function verifyToken(token: string): Promise<VerifiedUser> {
-  let payload: JwtPayload;
-
-  try {
-    payload = jwt.verify(token, JWT_ACCESS_SECRET) as JwtPayload;
-  } catch (err) {
-    console.error(err);
-    throw new Error("Invalid or expired token");
-  }
-
-  const [user] = await db.select().from(users).where(eq(users.id, payload.id));
-
-  if (!user) {
-    console.error("User not found");
-    throw new Error("User not found");
-  }
-
-  return {
-    id: payload.id,
-    exp: payload.exp,
-    iat: payload.iat,
-    role: user.role,
-    fullName: user.name,
-    email: user.email,
-  };
-}

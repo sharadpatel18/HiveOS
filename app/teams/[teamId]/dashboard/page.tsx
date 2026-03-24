@@ -12,7 +12,7 @@ import { TeamMembersTable } from "./components/team-members-table"
 import { TeamInfoCard } from "./components/team-info-card"
 import { TeamDashboardSkeleton } from "./components/team-dashboard-skeleton"
 import { type MemberRole } from "@/types/teams"
-import { useAuthStore } from "@/store/auth-store"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 
 interface TeamMember {
@@ -38,8 +38,8 @@ interface Team {
 
 export default function TeamDashboardPage() {
     const teamId = useParams().teamId as string
-    const user = useAuthStore((s) => s.user)
-
+    const { data: session, status } = useSession()
+    const user = session?.user
     const [team, setTeam] = useState<Team | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)

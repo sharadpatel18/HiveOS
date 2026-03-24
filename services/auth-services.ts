@@ -44,17 +44,17 @@ export const loginUser = async (data: LoginUser) => {
   }
 };
 
-export const getUserData = async () => {
-  try {
-    const response = await axios.get("/api/auth/me", {
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (error) {
-    const err = error as AxiosError<ApiErrorResponse>;
-    if (err.response?.data?.message) {
-      throw new Error(err.response.data.message);
-    }
-    throw new Error("Something went wrong. Please try again.");
-  }
-};
+// export const getUserData = async () => {
+//   try {
+//     const response = await axios.get("/api/auth/me", {
+//       withCredentials: true,
+//     });
+//     return response.data;
+//   } catch (error) {
+//     const err = error as AxiosError<ApiErrorResponse>;
+//     if (err.response?.data?.message) {
+//       throw new Error(err.response.data.message);
+//     }
+//     throw new Error("Something went wrong. Please try again.");
+//   }
+// };

@@ -1,19 +1,22 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { verifyToken, VerifiedUser } from "./auth"; // ✅ import VerifiedUser directly
 
-type AuthSuccess = { user: VerifiedUser };
+type AuthSuccess = {
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+    role?: string;
+  };
+};
 type AuthError = { error: NextResponse };
-export type AuthResult = AuthSuccess | AuthError; // ✅ no generic needed
+export type AuthResult = AuthSuccess | AuthError;
 
-export async function withAuth(request: Request): Promise<AuthResult> {
-  const cookieHeader = request.headers.get("cookie") || "";
+export async function withAuth(): Promise<AuthResult> {
+  const session = await getServerSession(authOptions);
 
-  const token = cookieHeader
-    .split("; ")
-    .find((c) => c.startsWith("accessToken="))
-    ?.split("=")[1];
-
-  if (!token) {
+  if (!session || !session.user) {
     return {
       error: NextResponse.json(
         { message: "Unauthorized", success: false },
@@ -22,16 +25,5 @@ export async function withAuth(request: Request): Promise<AuthResult> {
     };
   }
 
-  try {
-    const user = await verifyToken(token); // ✅ await added
-    return { user };
-  } catch (err) {
-    console.error("[withAuth] Token verification failed:", err);
-    return {
-      error: NextResponse.json(
-        { message: "Unauthorized", success: false },
-        { status: 401 },
-      ),
-    };
-  }
+  return { user: session.user };
 }
