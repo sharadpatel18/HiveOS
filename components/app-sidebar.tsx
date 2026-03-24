@@ -33,7 +33,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
-import { useAuthStore } from "@/store/auth-store"
+import { useSession } from "next-auth/react"
 import { useCompany } from "@/hooks/use-company"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -121,7 +121,8 @@ function useTeamId() {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isMount, setIsMount] = React.useState(false)
-  const user = useAuthStore((state) => state.user)
+  const { data: session, status } = useSession()
+  const user = session?.user
   const { data: company } = useCompany()
   const { activeKey, setActiveKey } = useActiveNav("dashboard")
   const teamId = useTeamId()
@@ -416,14 +417,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* ── Footer ── */}
       <SidebarFooter>
         <NavUser
-          user={
-            user ?? {
-              id: "",
-              fullName: "",
-              email: "",
-              role: "",
-            }
-          }
+          user={{
+            id: user?.id ?? "",
+            fullName: user?.fullName ?? "",      // ✅ NextAuth uses 'name' not 'fullName'
+            email: user?.email ?? "",
+            role: user?.role ?? "",
+          }}
         />
       </SidebarFooter>
     </Sidebar>

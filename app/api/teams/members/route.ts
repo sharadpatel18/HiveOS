@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 // ─── POST /api/teams/members ──────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const auth: any = await withAuth(request);
+    const auth: any = await withAuth();
     if ("error" in auth) return auth.error as Response;
 
     // Resolve requester's companyId from DB
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
 // ─── GET /api/teams/members ───────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
   try {
-    const auth: any = await withAuth(request);
+    const auth: any = await withAuth();
     if ("error" in auth) return auth.error;
 
     // Resolve requester's companyId from DB

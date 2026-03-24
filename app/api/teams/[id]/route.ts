@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth: any = await withAuth(request);
+    const auth: any = await withAuth();
     if ("error" in auth) return auth.error as Response;
 
     const { id } = await params;
@@ -59,7 +59,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth: any = await withAuth(request);
+    const auth: any = await withAuth();
     if ("error" in auth) return auth.error;
 
     const { id } = await params;

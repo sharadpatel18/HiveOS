@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const auth: any = await withAuth(request);
+    const auth: any = await withAuth();
     if ("error" in auth) return auth.error as Response;
 
     const body = await request.json();
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const auth: any = await withAuth(request);
+    const auth: any = await withAuth();
     if ("error" in auth) return auth.error;
 
     // console.log(companyId);

@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useCompany } from "@/hooks/use-company"
-import { useAuthStore } from "@/store/auth-store"
+import { useSession } from "next-auth/react"
 import { ModeToggle } from "./theme-button"
 import {
   Bell,
@@ -38,6 +38,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { signOut } from "next-auth/react";
 
 // ─── Page title map ───────────────────────────────────────────────────────────
 
@@ -163,8 +164,8 @@ function NotificationsBell() {
 // ─── User dropdown ────────────────────────────────────────────────────────────
 
 function UserMenu() {
-  const user = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
+  const { data: session, status } = useSession()
+  const user = session?.user
 
   const initials = user?.fullName
     ? user.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -194,7 +195,7 @@ function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="gap-2 text-xs text-destructive focus:text-destructive cursor-pointer"
-          onClick={() => logout?.()}
+          onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut className="h-3.5 w-3.5" /> Sign out
         </DropdownMenuItem>
@@ -207,7 +208,8 @@ function UserMenu() {
 
 export function SiteHeader() {
   const { data: company, isLoading } = useCompany()
-  const user = useAuthStore((s) => s.user)
+  const { data: session } = useSession()
+  const user = session?.user
   const pageTitle = usePageTitle()
 
   // Derive role for the company badge

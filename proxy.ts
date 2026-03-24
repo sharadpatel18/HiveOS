@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify, SignJWT } from "jose";
+import { getToken } from "next-auth/jwt";
 
-// ─── Cookie names ─────────────────────────────────────────────────────────────
-const ACCESS_TOKEN_COOKIE = "accessToken";
-const REFRESH_TOKEN_COOKIE = "refreshToken";
-
-// ─── Secrets — must match what your backend uses to sign tokens ───────────────
-const ACCESS_SECRET = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET!);
-const REFRESH_SECRET = new TextEncoder().encode(
-  process.env.JWT_REFRESH_SECRET!,
-);
-
-// ─── Routes ───────────────────────────────────────────────────────────────────
-const PUBLIC_ROUTES = [
-  "/login",
-  "/signup",
-  "/forgot-password",
-  "/reset-password",
-];
 const AUTH_ONLY_ROUTES = [
   "/login",
   "/signup",
@@ -25,11 +8,7 @@ const AUTH_ONLY_ROUTES = [
   "/reset-password",
 ];
 
-function isPublicRoute(pathname: string) {
-  return PUBLIC_ROUTES.some(
-    (r) => pathname === r || pathname.startsWith(r + "/"),
-  );
-}
+const PROTECTED_ROUTES = ["/dashboard", "/company", "/profile", "/settings"];
 
 function isAuthOnlyRoute(pathname: string) {
   return AUTH_ONLY_ROUTES.some(
@@ -37,94 +16,52 @@ function isAuthOnlyRoute(pathname: string) {
   );
 }
 
-function redirectToLoginHard(request: NextRequest) {
-  const loginUrl = new URL("/login", request.url);
-  const fullPath = request.nextUrl.pathname + request.nextUrl.search;
-  loginUrl.searchParams.set("redirect", fullPath);
-  const response = NextResponse.redirect(loginUrl);
-  response.cookies.delete(ACCESS_TOKEN_COOKIE);
-  response.cookies.delete(REFRESH_TOKEN_COOKIE);
-  return response;
-}
-// ─── Verify a token directly — no fetch, no network call ─────────────────────
-async function verifyToken(token: string, secret: Uint8Array) {
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return payload;
-  } catch {
-    return null;
-  }
+function isProtectedRoute(pathname: string) {
+  return PROTECTED_ROUTES.some(
+    (r) => pathname === r || pathname.startsWith(r + "/"),
+  );
 }
 
-// ─── Generate new access token directly in proxy ─────────────────────────────
-async function generateAccessToken(payload: Record<string, unknown>) {
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("15m")
-    .sign(ACCESS_SECRET);
-}
+export default async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
 
-// ─── Proxy ────────────────────────────────────────────────────────────────────
-export default async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET!,
+  });
 
-  const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
-  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+  const isLoggedIn = !!token;
 
-  // 1. No refresh token → session dead → redirect to login
-  if (!refreshToken) {
-    if (isPublicRoute(pathname)) return NextResponse.next();
-    return redirectToLoginHard(request);
-  }
+  // ✅ 1. If user is logged in and tries to access login/signup
+  // → redirect to redirect param OR dashboard
+  if (isLoggedIn && isAuthOnlyRoute(pathname)) {
+    const redirect = searchParams.get("redirect");
 
-  // 2. Authenticated + visiting login/register → send to dashboard
-  if (isAuthOnlyRoute(pathname)) {
+    if (redirect) {
+      return NextResponse.redirect(new URL(redirect, request.url));
+    }
+
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // 3. Public route → allow
-  if (isPublicRoute(pathname)) {
-    return NextResponse.next();
+  // ✅ 2. If NOT logged in and accessing protected route
+  // → redirect to login with FULL path (including ?token=...)
+  if (!isLoggedIn && isProtectedRoute(pathname)) {
+    const loginUrl = new URL("/login", request.url);
+
+    const fullPath = pathname + request.nextUrl.search;
+
+    loginUrl.searchParams.set("redirect", fullPath);
+
+    return NextResponse.redirect(loginUrl);
   }
 
-  // 4. Has access token → verify it directly (no fetch)
-  if (accessToken) {
-    const payload = await verifyToken(accessToken, ACCESS_SECRET);
-    if (payload) return NextResponse.next(); // valid token → allow
-    // Access token is invalid/expired → fall through to refresh
-  }
-
-  // 5. No access token or expired → verify refresh token directly (no fetch)
-  const refreshPayload = await verifyToken(refreshToken, REFRESH_SECRET);
-
-  if (!refreshPayload) {
-    // Refresh token is also invalid/expired → force login
-    return redirectToLoginHard(request);
-  }
-
-  // 6. Refresh token valid → generate new access token directly here
-  //    Strip jwt-specific fields, keep only your custom payload fields
-  const { iat, exp, ...userPayload } = refreshPayload;
-
-  const newAccessToken = await generateAccessToken(userPayload);
-
-  // 7. Set new access token cookie and continue the request
-  const response = NextResponse.next();
-
-  response.cookies.set(ACCESS_TOKEN_COOKIE, newAccessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 15, // 15 minutes
-    path: "/",
-  });
-
-  return response;
+  // ✅ 3. Allow request
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|otf|css|js)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|api/auth|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|otf|css|js)$).*)",
   ],
 };
