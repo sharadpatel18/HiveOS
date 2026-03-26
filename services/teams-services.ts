@@ -1,5 +1,6 @@
 import { useCompany } from "@/hooks/use-company";
 import Axios, { AxiosError } from "axios";
+import { toast } from "sonner";
 
 interface ApiErrorResponse {
   message: string;
@@ -18,12 +19,16 @@ type ITeam = {
 export const createTeam = async (data: ITeam) => {
   try {
     const response = await Axios.post("/api/teams", data);
+    if (response.status === 200) {
+      toast.success(response.data.message);
+    }
     return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
       throw new Error(err.response.data.message);
     }
+    toast.error("Something went wrong. Please try again.");
     throw new Error("Something went wrong. Please try again.");
   }
 };
@@ -36,23 +41,25 @@ export const getTeams = async () => {
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
+      toast.error(err.response.data.message);
       throw new Error(err.response.data.message);
     }
+    toast.error("Something went wrong. Please try again.");
     throw new Error("Something went wrong. Please try again.");
   }
 };
 
 export const getTeamsById = async (id: string) => {
   try {
-    console.log(id);
     const response = await Axios.get(`/api/teams/${id}`);
-    console.log(response.data);
     return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
+      // toast.error(err.response.data.message);
       throw new Error(err.response.data.message);
     }
+    // toast.error("Something went wrong. Please try again.");
     throw new Error("Something went wrong. Please try again.");
   }
 };
@@ -64,12 +71,15 @@ export const addTeamMember = async (data: {
 }) => {
   try {
     const response = await Axios.post("/api/teams/members", data);
+    toast.success("Member added successfully.");
     return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
+      toast.error(err.response.data.message);
       throw new Error(err.response.data.message);
     }
+    toast.error("Something went wrong. Please try again.");
     throw new Error("Something went wrong. Please try again.");
   }
 };
@@ -81,8 +91,28 @@ export const getTeamMembersByEmail = async (email: string) => {
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;
     if (err.response?.data?.message) {
+      toast.error(err.response.data.message);
       throw new Error(err.response.data.message);
     }
+    toast.error("Something went wrong. Please try again.");
+    throw new Error("Something went wrong. Please try again.");
+  }
+};
+
+export const deleteTeamMembers = async (id: string) => {
+  try {
+    const response = await Axios.delete(`/api/teams/members/${id}`);
+    if (response.data.success === true) {
+      toast.success(response.data.message);
+    }
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError<ApiErrorResponse>;
+    if (err.response?.data?.message) {
+      toast.error(err.response.data.message);
+      throw new Error(err.response.data.message);
+    }
+    toast.error("Something went wrong. Please try again.");
     throw new Error("Something went wrong. Please try again.");
   }
 };

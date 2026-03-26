@@ -139,7 +139,6 @@ export async function GET(request: Request) {
       })
       .from(teams)
       .where(eq(teams.companyId, companyId));
-    console.log("TEAM DETAILS", teamDetails);
 
     return NextResponse.json(teamDetails, { status: 200 });
   } catch (error) {
