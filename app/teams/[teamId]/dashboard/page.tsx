@@ -1,6 +1,6 @@
 "use client"
 
-import { getTeamsById, addTeamMember } from "@/services/teams-services"
+import { getTeamsById, addTeamMember, deleteTeamMembers } from "@/services/teams-services"
 import { useParams } from "next/navigation"
 import { useEffect, useState, useCallback } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -73,7 +73,6 @@ export default function TeamDashboardPage() {
     async function handleAddMember(userId: string, role: MemberRole) {
         try {
             await addTeamMember({ teamId, userId, role })
-            toast.success("Member added successfully.")
             await fetchTeam()
         } catch {
             toast.error("Failed to add member. Please try again.")
@@ -130,7 +129,7 @@ export default function TeamDashboardPage() {
                                                         handleAddMember={handleAddMember}
                                                         onRemoveMember={async (memberId) => {
                                                             // your API call here
-                                                            await fetch(`/api/teams/members/${memberId}`, { method: "DELETE" })
+                                                            await deleteTeamMembers(memberId)
                                                         }}
                                                     />
                                                 )
