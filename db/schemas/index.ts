@@ -4,7 +4,3 @@ export { companyMembers } from "./company/company-members";
 export { companyInvites } from "./company/company-invites";
 export { teams } from "./team/team";
 export { teamMembers } from "./team/team_members";
-export { tasks } from "./task/tasks";
-export { taskAssignees } from "./task/task-assignees";
-export { taskComments } from "./task/task-comments";
-export { taskActivityLogs } from "./task/task-activity-logs";
