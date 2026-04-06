@@ -555,7 +555,7 @@ export default function TeamsPage() {
     // ✅ Use real data and loading state from useTeams hook
     const { data: teamList, isLoading: loadingTeams } = useTeams()
     const teams: Team[] = teamList ?? []
-
+    console.log(teams)
     return (
         <SidebarProvider
             style={{

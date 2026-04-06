@@ -5,29 +5,22 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772573165870,
-      "tag": "0000_ambitious_ender_wiggin",
+      "when": 1774789848757,
+      "tag": "0000_goofy_fantastic_four",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1772965448187,
-      "tag": "0001_vengeful_mathemanic",
+      "when": 1774789893236,
+      "tag": "0001_sharp_gabe_jones",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1773004827152,
-      "tag": "0002_sparkling_peter_parker",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1774787600052,
-      "tag": "0003_modern_vapor",
+      "when": 1774790051495,
+      "tag": "0002_brown_betty_brant",
       "breakpoints": true
     }
   ]
