@@ -1,2 +1,0 @@
-ALTER TABLE "teams" ADD COLUMN "company_id" uuid NOT NULL;--> statement-breakpoint
-ALTER TABLE "teams" ADD CONSTRAINT "teams_company_id_company_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."company"("id") ON DELETE no action ON UPDATE no action;
