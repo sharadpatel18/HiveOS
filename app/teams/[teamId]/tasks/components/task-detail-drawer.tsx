@@ -58,7 +58,7 @@ interface WithAssignData extends Task {
             name: string
             email: string
             role: string
-        }[]
+        }
     }[]
 }
 
@@ -243,62 +243,96 @@ export function TaskDetailDrawer({
                                                 Assignee Details
                                             </p>
 
-                                            {task.assignee.map((person) => (
-                                                <div
-                                                    key={person.id}
-                                                    className="rounded-xl border bg-card p-4 space-y-4"
-                                                >
-                                                    {/* Assigned user */}
-                                                    <div className="flex items-start gap-3">
-                                                        <Avatar className="h-10 w-10">
-                                                            <AvatarFallback>
-                                                                {person.name?.charAt(0).toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-
-                                                        <div className="space-y-1">
-                                                            <p className="text-sm font-medium">{person.name}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {person.email}
-                                                            </p>
-                                                            <Badge variant="secondary">{person.role}</Badge>
-                                                        </div>
-                                                    </div>
-
+                                            {task.assignee?.length > 0 && (
+                                                <>
                                                     <Separator />
 
-                                                    {/* Assigned by */}
-                                                    {person.assignedBy && (
-                                                        <div className="space-y-2">
-                                                            <p className="text-xs font-medium text-muted-foreground">
-                                                                Assigned By
-                                                            </p>
-
-                                                            <div className="rounded-lg bg-muted p-3">
-                                                                <div className="flex items-start gap-3">
-                                                                    <Avatar className="h-8 w-8">
-                                                                        <AvatarFallback>
-                                                                            {person.assignedBy[0].name
-                                                                                ?.charAt(0)
-                                                                                .toUpperCase()}
-                                                                        </AvatarFallback>
-                                                                    </Avatar>
-
-                                                                    <div className="space-y-1">
-                                                                        <p className="text-sm font-medium">
-                                                                            {person.assignedBy[0].name}
-                                                                        </p>
-                                                                        <p className="text-xs text-muted-foreground">
-                                                                            {person.assignedBy[0].email}
-                                                                        </p>
-                                                                        <Badge>{person.assignedBy[0].role}</Badge>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <h3 className="text-sm font-semibold tracking-tight">
+                                                                Team Assignment
+                                                            </h3>
+                                                            <Badge variant="outline">
+                                                                {task.assignee.length} Member
+                                                                {task.assignee.length > 1 ? "s" : ""}
+                                                            </Badge>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
+
+                                                        <div className="space-y-3">
+                                                            {task.assignee.map((person) => (
+                                                                <div
+                                                                    key={person.id}
+                                                                    className="rounded-2xl border bg-card p-4 shadow-sm"
+                                                                >
+                                                                    {/* Top user card */}
+                                                                    <div className="flex items-start justify-between">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <Avatar className="h-11 w-11 border">
+                                                                                <AvatarFallback className="text-sm font-semibold">
+                                                                                    {person.name
+                                                                                        ?.split(" ")
+                                                                                        .map((n) => n[0])
+                                                                                        .join("")
+                                                                                        .slice(0, 2)
+                                                                                        .toUpperCase()}
+                                                                                </AvatarFallback>
+                                                                            </Avatar>
+
+                                                                            <div className="space-y-0.5">
+                                                                                <p className="text-sm font-semibold">
+                                                                                    {person.name}
+                                                                                </p>
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    {person.email}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <Badge variant="secondary">
+                                                                            {person.role}
+                                                                        </Badge>
+                                                                    </div>
+
+                                                                    {/* Assigned by timeline style */}
+                                                                    {person.assignedBy && (
+                                                                        <div className="mt-4 rounded-xl border bg-muted/40 p-3">
+                                                                            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                                                                Assigned By
+                                                                            </p>
+
+                                                                            <div className="flex items-center gap-3">
+                                                                                <Avatar className="h-9 w-9 border">
+                                                                                    <AvatarFallback className="text-xs font-semibold">
+                                                                                        {person.assignedBy.name
+                                                                                            ?.split(" ")
+                                                                                            .map((n) => n[0])
+                                                                                            .join("")
+                                                                                            .slice(0, 2)
+                                                                                            .toUpperCase()}
+                                                                                    </AvatarFallback>
+                                                                                </Avatar>
+
+                                                                                <div className="flex-1">
+                                                                                    <p className="text-sm font-medium">
+                                                                                        {person.assignedBy.name}
+                                                                                    </p>
+                                                                                    <p className="text-xs text-muted-foreground">
+                                                                                        {person.assignedBy.email}
+                                                                                    </p>
+                                                                                </div>
+
+                                                                                <Badge variant="outline">
+                                                                                    {person.assignedBy.role}
+                                                                                </Badge>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </>
                                 )}

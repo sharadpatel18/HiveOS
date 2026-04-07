@@ -53,8 +53,7 @@ export async function GET(
         assignedByUser,
         eq(assignedByUser.id, taskAssignments.assignedById),
       )
-      .where(eq(taskAssignments.taskId, id))
-      .limit(1);
+      .where(eq(taskAssignments.taskId, id));
 
     return NextResponse.json(
       { ...findTask[0], assignee: findAssigneeData },
