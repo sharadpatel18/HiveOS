@@ -44,7 +44,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { useTeamsDetails } from "@/hooks/use-teams"
 import { useSession } from "next-auth/react"
 import { TaskDetailDrawer } from "./task-detail-drawer"
-
+import { useCreateTask, useUpdateTask, useDeleteTask } from "@/hooks/use-tasks"
 // ── Kanban config ─────────────────────────────────────────────────────────────
 
 const COLUMNS: { status: TaskStatus; label: string; icon: React.ReactNode; color: string }[] = [
@@ -349,8 +349,9 @@ function TaskDialog({
     )
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isLoading, setIsLoading] = useState(false)
-
     const members = team?.members ?? []
+    const createTaskMutation = useCreateTask(companyId, teamId);
+    const updateTaskMutation = useUpdateTask(companyId, teamId);
 
     // sync state when editTask changes
     useEffect(() => {
@@ -381,39 +382,62 @@ function TaskDialog({
 
     const handleSubmit = async () => {
         const result = taskValidation.safeParse({
-            title, description, priority, status, dueDate,
-            companyId, teamId, assignedById,
-            assigneeIds: assigneeIds.length > 0 ? assigneeIds : [assignedById],
-        })
+            title,
+            description,
+            priority,
+            status,
+            dueDate,
+            companyId,
+            teamId,
+            assignedById,
+            assigneeIds:
+                assigneeIds.length > 0
+                    ? assigneeIds
+                    : [assignedById],
+        });
 
         if (!result.success) {
-            const fieldErrors: Record<string, string> = {}
+            const fieldErrors: Record<string, string> = {};
+
             result.error.issues.forEach((issue) => {
-                fieldErrors[issue.path[0] as string] = issue.message
-            })
-            setErrors(fieldErrors)
-            return
+                fieldErrors[issue.path[0] as string] =
+                    issue.message;
+            });
+
+            setErrors(fieldErrors);
+            return;
         }
 
-        setErrors({})
-        setIsLoading(true)
+        setErrors({});
+        setIsLoading(true);
 
         try {
             if (isEdit && editTask) {
-                await updateTaskById({ id: editTask.id, status: result.data.status })
-            } else {
+                await updateTaskMutation.mutateAsync({
+                    id: editTask.id,
+                    status: result.data.status,
+                });
 
-                await createTask(result.data)
+                toast.success("Task updated");
+            } else {
+                await createTaskMutation.mutateAsync(
+                    result.data
+                );
+
+                toast.success("Task created");
             }
-            toast.success(isEdit ? "Task updated" : "Task created")
-            onOpenChange(false)
-            onSuccess()
+
+            onOpenChange(false);
+            onSuccess?.();
         } catch (error: any) {
-            toast.error(error.message)
+            toast.error(
+                error?.message ||
+                "Something went wrong"
+            );
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -562,12 +586,13 @@ function TaskDialog({
 // ── Delete confirm dialog ─────────────────────────────────────────────────────
 
 function DeleteTaskDialog({
-    task, open, onOpenChange, onSuccess,
+    task, open, onOpenChange, onSuccess, deleteTaskMutation
 }: {
     task: TaskWithAssignees | null
     open: boolean
     onOpenChange: (v: boolean) => void
     onSuccess: () => void
+    deleteTaskMutation: any
 }) {
     const [isLoading, setIsLoading] = useState(false)
 
@@ -576,7 +601,7 @@ function DeleteTaskDialog({
         setIsLoading(true)
         try {
 
-            await deleteTaskById(task.id)
+            await deleteTaskMutation.mutateAsync(task.id)
             toast.success("Task deleted")
             onOpenChange(false)
             onSuccess()
@@ -655,7 +680,7 @@ export function TasksContent({ teamId }: { teamId: string }) {
     const [deleteTask_, setDeleteTask] = useState<TaskWithAssignees | null>(null)
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
     const [drawerOpen, setDrawerOpen] = useState(false)
-
+    const deleteTaskMutation = useDeleteTask(companyId, teamId);
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
     )
@@ -845,6 +870,7 @@ export function TasksContent({ teamId }: { teamId: string }) {
                 open={!!deleteTask_}
                 onOpenChange={(v) => !v && setDeleteTask(null)}
                 onSuccess={() => { setLocalTasks([]); invalidateTasks() }}
+                deleteTaskMutation={deleteTaskMutation}
             />
         </div>
     )
