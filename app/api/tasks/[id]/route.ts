@@ -1,8 +1,8 @@
 import db from "@/db";
-import { tasks } from "@/db/schemas";
+import { taskAssignments, tasks, users } from "@/db/schemas";
 import { withAuth } from "@/lib/withAuth";
 import { updateTaskValidation } from "@/validations/task.validation";
-import { eq } from "drizzle-orm";
+import { eq, aliasedTable } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -31,7 +31,35 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(findTask, { status: 200 });
+    const assignedUser = aliasedTable(users, "assignedUser");
+    const assignedByUser = aliasedTable(users, "assignedByUser");
+
+    const findAssigneeData = await db
+      .select({
+        id: taskAssignments.userId,
+        name: assignedUser.name,
+        email: assignedUser.email,
+        role: assignedUser.role,
+        assignedBy: {
+          name: assignedByUser.name,
+          email: assignedByUser.email,
+          id: assignedByUser.id,
+          role: assignedByUser.role,
+        },
+      })
+      .from(taskAssignments)
+      .leftJoin(assignedUser, eq(assignedUser.id, taskAssignments.userId))
+      .leftJoin(
+        assignedByUser,
+        eq(assignedByUser.id, taskAssignments.assignedById),
+      )
+      .where(eq(taskAssignments.taskId, id))
+      .limit(1);
+
+    return NextResponse.json(
+      { ...findTask[0], assignee: findAssigneeData },
+      { status: 200 },
+    );
   } catch (error) {
     console.error(error);
     return NextResponse.json(

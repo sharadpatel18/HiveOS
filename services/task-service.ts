@@ -34,6 +34,19 @@ export const getTasksByTeamId = async (companyId: string, teamId: string) => {
   }
 };
 
+export const getTaskById = async (id: string) => {
+  try {
+    const response = await axios.get(`/api/tasks/${id}`);
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError<ApiErrorResponse>;
+    if (err.response?.data?.message) {
+      throw new Error(err.response.data.message);
+    }
+    throw new Error("Something went wrong. Please try again.");
+  }
+};
+
 export const updateTaskById = async (data: UpdateTaskValidationInput) => {
   try {
     const response = await axios.patch(`/api/tasks/${data.id}`, data);
