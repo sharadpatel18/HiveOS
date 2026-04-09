@@ -6,3 +6,4 @@ export { teams } from "./team/team";
 export { teamMembers } from "./team/team_members";
 export { tasks } from "./tasks/tasks";
 export { taskAssignments } from "./tasks/task_assignment";
+export * from "./chat/chat"; // add this line
