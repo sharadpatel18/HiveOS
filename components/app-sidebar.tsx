@@ -176,15 +176,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         disabled: role === "USER",
         disabledReason: "Join the company to view members",
       },
-      {
-        title: "Invite Members",
-        url: `/company/${companyId}/members`,
-        icon: IconUserPlus,
-        isActive: activeKey === "invite-members",
-        onClick: () => setActiveKey("invite-members"),
-        disabled: isEmployee || role === "USER",
-        disabledReason: "Only founders and recruiters can invite",
-      },
     ]
     : []
 
@@ -214,13 +205,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         onClick: () => setActiveKey("team-dashboard"),
       },
       {
-        title: "Team Members",
-        url: `/teams/${teamId}/members`,
-        icon: IconUsers,
-        isActive: activeKey === "team-members",
-        onClick: () => setActiveKey("team-members"),
-      },
-      {
         title: "Team Tasks",
         url: `/teams/${teamId}/tasks`,
         icon: IconListCheck,
@@ -246,42 +230,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ]
     : []
 
-  // ── 4. Task Management ────────────────────────────────────────────────────
-  const navTasks = company && companyId
-    ? [
-      {
-        title: "My Tasks",
-        url: `/company/${companyId}/tasks`,
-        icon: IconListCheck,
-        isActive: activeKey === "my-tasks",
-        onClick: () => setActiveKey("my-tasks"),
-      },
-      {
-        title: "All Tasks",
-        url: `/company/${companyId}/tasks/all`,
-        icon: IconClipboardList,
-        isActive: activeKey === "all-tasks",
-        onClick: () => setActiveKey("all-tasks"),
-        disabled: isEmployee || role === "USER",
-        disabledReason: "Only managers and above can view all tasks",
-      },
-    ]
-    : []
-
-  // ── 5. Applications & Settings ────────────────────────────────────────────
-  const navApplications = company && companyId
-    ? [
-      {
-        title: "Applications",
-        url: `/company/${companyId}/applications`,
-        icon: IconFileText,
-        isActive: activeKey === "applications",
-        onClick: () => setActiveKey("applications"),
-        disabled: isEmployee || role === "USER",
-        disabledReason: "Only founders and recruiters can view",
-      },
-    ]
-    : []
 
   // ── Secondary nav ─────────────────────────────────────────────────────────
   const navSecondary = [
@@ -317,7 +265,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href="/dashboard" onClick={() => setActiveKey("dashboard")}>
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">GrowWithMe.</span>
+                <span className="text-base font-semibold">HiveOS.</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -327,7 +275,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* ── Content ── */}
       <SidebarContent>
         {/* General */}
-        <NavMain items={navGeneral} showQuickCreate />
+        <NavMain items={navGeneral} label={
+          <span className="flex items-center justify-between gap-2 w-full pr-1">
+            <span className="truncate">General</span>
+          </span>
+        } showQuickCreate />
 
         {company && companyId ? (
           <>
@@ -368,26 +320,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 }
               />
             )}
-
-            {/* Section 3 — Task Management */}
-            <NavMain
-              items={navTasks}
-              label={
-                <span className="flex items-center justify-between gap-2 w-full pr-1">
-                  <span>Tasks</span>
-                </span>
-              }
-            />
-
-            {/* Section 4 — Applications */}
-            <NavMain
-              items={navApplications}
-              label={
-                <span className="flex items-center justify-between gap-2 w-full pr-1">
-                  <span>Applications</span>
-                </span>
-              }
-            />
           </>
         ) : (
           <>
