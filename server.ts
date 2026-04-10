@@ -29,7 +29,7 @@ const pool = new Pool({
 const db = drizzle(pool, { schema });
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
+const hostname = "0.0.0.0";
 const port = parseInt(process.env.PORT ?? "3000", 10);
 
 const app = next({ dev, hostname, port });
@@ -40,8 +40,8 @@ const onlineUsers = new Map<string, string>();
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
-    const parsedUrl = parse(req.url!, true);
-    handle(req, res, parsedUrl);
+    // const parsedUrl = parse(req.url!, true);
+    handle(req, res);
   });
 
   const io = new SocketIOServer(httpServer, {
