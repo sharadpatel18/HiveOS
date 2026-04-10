@@ -43,7 +43,8 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { useTeamsDetails } from "@/hooks/use-teams"
 import { useSession } from "next-auth/react"
-
+import { TaskDetailDrawer } from "./task-detail-drawer"
+import { useCreateTask, useUpdateTask, useDeleteTask } from "@/hooks/use-tasks"
 // ── Kanban config ─────────────────────────────────────────────────────────────
 
 const COLUMNS: { status: TaskStatus; label: string; icon: React.ReactNode; color: string }[] = [
@@ -61,21 +62,59 @@ const PRIORITY_BADGE: Record<string, string> = {
     URGENT: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
 }
 
+const STATUS_STYLES: Record<TaskStatus, { bg: string; border: string; blur: string; card: string }> = {
+    NOT_STARTED: {
+        bg: "bg-gray-500/8 dark:bg-gray-400/6",
+        border: "border border-gray-400/20 dark:border-gray-400/15",
+        blur: "backdrop-blur-sm",
+        card: "bg-gray-100/80 dark:bg-gray-500/10 border-gray-200/60 dark:border-gray-400/15",
+    },
+    IN_PROGRESS: {
+        bg: "bg-blue-500/8 dark:bg-blue-400/6",
+        border: "border border-blue-400/20 dark:border-blue-400/15",
+        blur: "backdrop-blur-sm",
+        card: "bg-blue-50/80 dark:bg-blue-500/10 border-blue-200/60 dark:border-blue-400/15",
+    },
+    IN_REVIEW: {
+        bg: "bg-amber-500/8 dark:bg-amber-400/6",
+        border: "border border-amber-400/20 dark:border-amber-400/15",
+        blur: "backdrop-blur-sm",
+        card: "bg-amber-50/80 dark:bg-amber-500/10 border-amber-200/60 dark:border-amber-400/15",
+    },
+    COMPLETED: {
+        bg: "bg-emerald-500/8 dark:bg-emerald-400/6",
+        border: "border border-emerald-400/20 dark:border-emerald-400/15",
+        blur: "backdrop-blur-sm",
+        card: "bg-emerald-50/80 dark:bg-emerald-500/10 border-emerald-200/60 dark:border-emerald-400/15",
+    },
+    CANCELLED: {
+        bg: "bg-red-500/8 dark:bg-red-400/6",
+        border: "border border-red-400/20 dark:border-red-400/15",
+        blur: "backdrop-blur-sm",
+        card: "bg-red-50/80 dark:bg-red-500/10 border-red-200/60 dark:border-red-400/15",
+    },
+}
+
 // ── Task card ─────────────────────────────────────────────────────────────────
 
 function TaskCard({
-    task, onEdit, onDelete, isDragging = false,
+    task, onEdit, onDelete, isDragging = false, onTaskClick
 }: {
     task: TaskWithAssignees
     onEdit: (task: TaskWithAssignees) => void
     onDelete: (task: TaskWithAssignees) => void
     isDragging?: boolean
+    onTaskClick?: (task: TaskWithAssignees) => void
 }) {
+    const cardStyle = STATUS_STYLES[task.status].card   // 👈 pick up the color
     return (
-        <div className={cn(
-            "rounded-lg border bg-card p-3 shadow-sm space-y-2 transition-shadow",
-            isDragging ? "opacity-50 shadow-lg rotate-1" : "hover:shadow-md"
-        )}>
+        <div
+            onClick={() => onTaskClick?.(task)}
+            className={cn(
+                "rounded-lg border bg-card p-3 shadow-sm space-y-2 transition-shadow",
+                cardStyle,
+                isDragging ? "opacity-50 shadow-lg rotate-1" : "hover:shadow-md"
+            )}>
             <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-medium leading-snug flex-1">{task.title}</p>
                 <div className="flex items-center gap-1 shrink-0">
@@ -141,11 +180,12 @@ function TaskCard({
 // ── Sortable task card wrapper ─────────────────────────────────────────────────
 
 function SortableTaskCard({
-    task, onEdit, onDelete,
+    task, onEdit, onDelete, onTaskClick
 }: {
     task: TaskWithAssignees
     onEdit: (task: TaskWithAssignees) => void
     onDelete: (task: TaskWithAssignees) => void
+    onTaskClick: (task: TaskWithAssignees) => void
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: task.id,
@@ -160,7 +200,7 @@ function SortableTaskCard({
 
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} isDragging={isDragging} />
+            <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} isDragging={isDragging} onTaskClick={onTaskClick} />
         </div>
     )
 }
@@ -169,12 +209,15 @@ function SortableTaskCard({
 
 function KanbanColumn({
     status, label, icon, color, tasks, onEdit, onDelete,
+    onTaskClick
 }: {
     status: TaskStatus; label: string; icon: React.ReactNode
     color: string; tasks: TaskWithAssignees[]
     onEdit: (task: TaskWithAssignees) => void
     onDelete: (task: TaskWithAssignees) => void
+    onTaskClick: (task: TaskWithAssignees) => void
 }) {
+    const styles = STATUS_STYLES[status]
     return (
         <div
             className="flex flex-col gap-3 w-[280px] md:w-[260px] lg:flex-1 shrink-0"
@@ -189,11 +232,16 @@ function KanbanColumn({
             </div>
             <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 <div
-                    className="flex flex-col gap-2 rounded-xl bg-muted/40 p-2 min-h-[120px] flex-1"
+                    className={cn(
+                        "flex flex-col gap-2 rounded-xl p-2 min-h-[120px] flex-1",
+                        styles.bg,
+                        styles.border,
+                        styles.blur,
+                    )}
                     data-droppable-id={status}
                 >
                     {tasks.map((t) => (
-                        <SortableTaskCard key={t.id} task={t} onEdit={onEdit} onDelete={onDelete} />
+                        <SortableTaskCard key={t.id} task={t} onEdit={onEdit} onDelete={onDelete} onTaskClick={onTaskClick} />
                     ))}
                     {tasks.length === 0 && (
                         <div className="flex-1 flex items-center justify-center py-6">
@@ -209,14 +257,16 @@ function KanbanColumn({
 // ── Mobile Kanban ─────────────────────────────────────────────────────────────
 
 function MobileKanban({
-    grouped, onEdit, onDelete,
+    grouped, onEdit, onDelete, onTaskClick
 }: {
     grouped: Record<TaskStatus, TaskWithAssignees[]>
     onEdit: (task: TaskWithAssignees) => void
     onDelete: (task: TaskWithAssignees) => void
+    onTaskClick: (task: TaskWithAssignees) => void
 }) {
     const [activeStatus, setActiveStatus] = useState<TaskStatus>("NOT_STARTED")
     const activeColumn = COLUMNS.find((c) => c.status === activeStatus)!
+    const styles = STATUS_STYLES[activeStatus]
 
     return (
         <div className="flex flex-col gap-3">
@@ -251,13 +301,18 @@ function MobileKanban({
                 <ScrollBar orientation="horizontal" />
             </ScrollArea>
 
-            <div className="flex flex-col gap-2">
+            <div className={cn(
+                "flex flex-col gap-2 rounded-xl p-2",
+                styles.bg,
+                styles.border,
+                styles.blur,
+            )}>
                 {grouped[activeStatus]?.length > 0 ? (
                     grouped[activeStatus].map((t) => (
-                        <TaskCard key={t.id} task={t} onEdit={onEdit} onDelete={onDelete} />
+                        <TaskCard key={t.id} task={t} onEdit={onEdit} onDelete={onDelete} onTaskClick={onTaskClick} />
                     ))
                 ) : (
-                    <div className="flex items-center justify-center rounded-xl bg-muted/40 py-12">
+                    <div className="flex items-center justify-center py-12">
                         <p className="text-xs text-muted-foreground">No tasks in {activeColumn.label}</p>
                     </div>
                 )}
@@ -294,8 +349,9 @@ function TaskDialog({
     )
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isLoading, setIsLoading] = useState(false)
-
     const members = team?.members ?? []
+    const createTaskMutation = useCreateTask(companyId, teamId);
+    const updateTaskMutation = useUpdateTask(companyId, teamId);
 
     // sync state when editTask changes
     useEffect(() => {
@@ -326,39 +382,62 @@ function TaskDialog({
 
     const handleSubmit = async () => {
         const result = taskValidation.safeParse({
-            title, description, priority, status, dueDate,
-            companyId, teamId, assignedById,
-            assigneeIds: assigneeIds.length > 0 ? assigneeIds : [assignedById],
-        })
+            title,
+            description,
+            priority,
+            status,
+            dueDate,
+            companyId,
+            teamId,
+            assignedById,
+            assigneeIds:
+                assigneeIds.length > 0
+                    ? assigneeIds
+                    : [assignedById],
+        });
 
         if (!result.success) {
-            const fieldErrors: Record<string, string> = {}
+            const fieldErrors: Record<string, string> = {};
+
             result.error.issues.forEach((issue) => {
-                fieldErrors[issue.path[0] as string] = issue.message
-            })
-            setErrors(fieldErrors)
-            return
+                fieldErrors[issue.path[0] as string] =
+                    issue.message;
+            });
+
+            setErrors(fieldErrors);
+            return;
         }
 
-        setErrors({})
-        setIsLoading(true)
+        setErrors({});
+        setIsLoading(true);
 
         try {
             if (isEdit && editTask) {
-                await updateTaskById({ id: editTask.id, status: result.data.status })
+                await updateTaskMutation.mutateAsync({
+                    id: editTask.id,
+                    status: result.data.status,
+                });
+
+                toast.success("Task updated");
             } else {
-                console.log(result.data)
-                await createTask(result.data)
+                await createTaskMutation.mutateAsync(
+                    result.data
+                );
+
+                toast.success("Task created");
             }
-            toast.success(isEdit ? "Task updated" : "Task created")
-            onOpenChange(false)
-            onSuccess()
+
+            onOpenChange(false);
+            onSuccess?.();
         } catch (error: any) {
-            toast.error(error.message)
+            toast.error(
+                error?.message ||
+                "Something went wrong"
+            );
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -507,12 +586,13 @@ function TaskDialog({
 // ── Delete confirm dialog ─────────────────────────────────────────────────────
 
 function DeleteTaskDialog({
-    task, open, onOpenChange, onSuccess,
+    task, open, onOpenChange, onSuccess, deleteTaskMutation
 }: {
     task: TaskWithAssignees | null
     open: boolean
     onOpenChange: (v: boolean) => void
     onSuccess: () => void
+    deleteTaskMutation: any
 }) {
     const [isLoading, setIsLoading] = useState(false)
 
@@ -521,7 +601,7 @@ function DeleteTaskDialog({
         setIsLoading(true)
         try {
 
-            await deleteTaskById(task.id)
+            await deleteTaskMutation.mutateAsync(task.id)
             toast.success("Task deleted")
             onOpenChange(false)
             onSuccess()
@@ -598,7 +678,9 @@ export function TasksContent({ teamId }: { teamId: string }) {
     const [createOpen, setCreateOpen] = useState(false)
     const [editTask, setEditTask] = useState<TaskWithAssignees | null>(null)
     const [deleteTask_, setDeleteTask] = useState<TaskWithAssignees | null>(null)
-
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+    const [drawerOpen, setDrawerOpen] = useState(false)
+    const deleteTaskMutation = useDeleteTask(companyId, teamId);
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
     )
@@ -703,6 +785,7 @@ export function TasksContent({ teamId }: { teamId: string }) {
                             grouped={grouped}
                             onEdit={(t) => setEditTask(t)}
                             onDelete={(t) => setDeleteTask(t)}
+                            onTaskClick={(t) => { setSelectedTaskId(t.id); setDrawerOpen(true) }}
                         />
                     </div>
 
@@ -724,6 +807,7 @@ export function TasksContent({ teamId }: { teamId: string }) {
                                             tasks={grouped[col.status] ?? []}
                                             onEdit={(t) => setEditTask(t)}
                                             onDelete={(t) => setDeleteTask(t)}
+                                            onTaskClick={(t) => { setSelectedTaskId(t.id); setDrawerOpen(true) }}
                                         />
                                     ))}
                                 </div>
@@ -747,6 +831,16 @@ export function TasksContent({ teamId }: { teamId: string }) {
                 </>
             )}
 
+            {
+                drawerOpen && (
+                    <TaskDetailDrawer
+                        taskId={selectedTaskId}
+                        open={drawerOpen}
+                        onClose={() => setDrawerOpen(false)}
+                        onEdit={(task) => { setEditTask(task); setDrawerOpen(false) }}
+                    />
+                )
+            }
             {/* Create dialog */}
             <TaskDialog
                 open={createOpen}
@@ -776,6 +870,7 @@ export function TasksContent({ teamId }: { teamId: string }) {
                 open={!!deleteTask_}
                 onOpenChange={(v) => !v && setDeleteTask(null)}
                 onSuccess={() => { setLocalTasks([]); invalidateTasks() }}
+                deleteTaskMutation={deleteTaskMutation}
             />
         </div>
     )
