@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 interface User {
     id: string;
-    fullName: string;
+    name: string;
     email: string;
 }
 
@@ -21,8 +21,8 @@ export function NewChatModal({ onClose, onConversationCreated }: NewChatModalPro
 
     useEffect(() => {
         fetch("/api/users")
-            .then(r => r.json())
-            .then(data => {
+            .then((r) => r.json())
+            .then((data) => {
                 setUsers(data);
                 setIsLoading(false);
             });
@@ -42,19 +42,18 @@ export function NewChatModal({ onClose, onConversationCreated }: NewChatModalPro
     };
 
     return (
-        // Backdrop
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
             onClick={onClose}
         >
-            {/* Modal */}
             <div
                 className="bg-background border rounded-xl shadow-lg w-80 p-4"
-                onClick={e => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-semibold">New Chat</h2>
                     <button
+                        type="button"
                         onClick={onClose}
                         className="text-muted-foreground hover:text-foreground text-lg leading-none"
                     >
@@ -73,25 +72,28 @@ export function NewChatModal({ onClose, onConversationCreated }: NewChatModalPro
                     </div>
                 ) : (
                     <ul className="space-y-1">
-                        {users.map(user => (
+                        {users.map((user) => (
                             <li key={user.id}>
                                 <button
+                                    type="button"
                                     onClick={() => startChat(user.id)}
                                     disabled={!!creating}
                                     className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-accent transition-colors disabled:opacity-50 text-left"
                                 >
-                                    {/* Avatar */}
                                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
-                                        {user.fullName.charAt(0).toUpperCase()}
+                                        {user.name
+                                            .split(" ")
+                                            .map((w) => w[0])
+                                            .join("")
+                                            .toUpperCase()
+                                            .slice(0, 2)}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">{user.fullName}</p>
+                                        <p className="text-sm font-medium truncate">{user.name}</p>
                                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                                     </div>
                                     {creating === user.id && (
-                                        <span className="text-xs text-muted-foreground shrink-0">
-                                            Starting…
-                                        </span>
+                                        <span className="text-xs text-muted-foreground shrink-0">Starting…</span>
                                     )}
                                 </button>
                             </li>

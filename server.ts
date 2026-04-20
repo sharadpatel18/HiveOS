@@ -8,7 +8,6 @@ config({ path: ".env" });
 console.log("DATABASE_URL:", process.env.DATABASE_URL);
 
 import { createServer } from "http";
-import { parse } from "url";
 import next from "next";
 import { Server as SocketIOServer, Socket } from "socket.io";
 // import db from "./db/index"; // your Drizzle db instance
@@ -29,7 +28,7 @@ const pool = new Pool({
 const db = drizzle(pool, { schema });
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "0.0.0.0";
+const hostname = "localhost";
 const port = parseInt(process.env.PORT ?? "3000", 10);
 
 const app = next({ dev, hostname, port });
@@ -52,6 +51,7 @@ app.prepare().then(() => {
     },
     // Attach io to the httpServer so API routes can emit events too
     path: "/api/socket",
+    transports: ["websocket"],
   });
 
   // Make io accessible in Next.js API routes via (global as any).io
