@@ -1,3 +1,4 @@
+// app/api/conversations/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/db/index";
 import {
@@ -5,35 +6,30 @@ import {
   conversationMembers,
   messages,
 } from "@/db/schemas/chat/chat";
-import { and, eq, isNull, desc, sql } from "drizzle-orm";
-import { getServerSession } from "next-auth"; // replace with your auth util
-import { authOptions } from "@/lib/auth"; // replace with your auth options
+import { users } from "@/db/schemas/user/user";
+import { and, eq, isNull, desc, sql, ne } from "drizzle-orm";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-// ── GET /api/conversations ────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+
   const userId = session.user.id;
 
-  // All conversations where the user is an active member,
-  // with the other member's info and unread count
   const rows = await db
     .select({
       conversation: conversations,
       lastMessage: messages,
       unreadCount: sql<number>`
         (
-          SELECT COUNT(*)::int
-          FROM messages m
+          SELECT COUNT(*)::int FROM messages m
           WHERE m.conversation_id = ${conversations.id}
             AND m.created_at > COALESCE(
-              (
-                SELECT last_read_at FROM conversation_members cm2
-                WHERE cm2.conversation_id = ${conversations.id}
-                  AND cm2.user_id = ${userId}
-              ),
+              (SELECT last_read_at FROM conversation_members cm2
+               WHERE cm2.conversation_id = ${conversations.id}
+                 AND cm2.user_id = ${userId}),
               '1970-01-01'::timestamptz
             )
             AND m.sender_id != ${userId}
@@ -55,24 +51,50 @@ export async function GET(req: NextRequest) {
     )
     .orderBy(desc(conversations.lastMessageAt));
 
-  // For each conversation, also fetch the OTHER member(s)
   const result = await Promise.all(
-    rows.map(async (row: any) => {
+    rows.map(async (row) => {
+      // Fetch all OTHER members with their user info
       const otherMembers = await db
-        .select({ userId: conversationMembers.userId })
+        .select({
+          userId: conversationMembers.userId,
+          name: users.name,
+          email: users.email,
+        })
         .from(conversationMembers)
+        .innerJoin(users, eq(users.id, conversationMembers.userId))
         .where(
           and(
             eq(conversationMembers.conversationId, row.conversation.id),
-            sql`${conversationMembers.userId} != ${userId}`,
+            ne(conversationMembers.userId, userId),
+            isNull(conversationMembers.leftAt),
           ),
         );
 
+      // For direct chats: use the other person's name
+      // For group chats: use the conversation name field
+      const displayName =
+        row.conversation.type === "direct"
+          ? (otherMembers[0]?.name ?? "Unknown")
+          : (row.conversation.name ?? "Unnamed Group");
+
+      // Initials for avatar
+      const initials =
+        row.conversation.type === "direct"
+          ? (otherMembers[0]?.name ?? "?")
+              .split(" ")
+              .map((w) => w[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2)
+          : (row.conversation.name ?? "G")[0].toUpperCase();
+
       return {
         ...row.conversation,
+        displayName,
+        initials,
         lastMessage: row.lastMessage,
         unreadCount: row.unreadCount,
-        otherMemberIds: otherMembers.map((m: any) => m.userId),
+        otherMembers,
       };
     }),
   );
@@ -80,22 +102,19 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(result);
 }
 
-// ── POST /api/conversations ───────────────────────────────────────────────────
-// Body: { otherUserId: string }
-// Returns existing conversation if one already exists, otherwise creates it.
+// ── POST /api/conversations  (direct chat only) ───────────────────────────────
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+
   const userId = session.user.id;
   const { otherUserId } = await req.json();
 
-  if (!otherUserId || otherUserId === userId) {
+  if (!otherUserId || otherUserId === userId)
     return NextResponse.json({ error: "Invalid otherUserId" }, { status: 400 });
-  }
 
-  // Check if a direct conversation already exists between the two users
+  // Check if direct conversation already exists
   const [existing] = await db
     .select({ id: conversations.id })
     .from(conversations)
@@ -118,11 +137,9 @@ export async function POST(req: NextRequest) {
     )
     .limit(1);
 
-  if (existing) {
+  if (existing)
     return NextResponse.json({ conversationId: existing.id, created: false });
-  }
 
-  // Create new conversation + two member rows
   const [newConv] = await db
     .insert(conversations)
     .values({ type: "direct" })
@@ -133,7 +150,6 @@ export async function POST(req: NextRequest) {
     { conversationId: newConv.id, userId: otherUserId },
   ]);
 
-  // Notify both users via socket (if connected)
   try {
     (global as any).io
       ?.to([userId, otherUserId])

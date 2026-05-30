@@ -1,15 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react"; // replace with your auth hook
-import { useSocket } from "@/hooks/useSocket";
+import { useSession } from "next-auth/react";
+import { getSocket, useSocket } from "@/hooks/useSocket";
 import { useChat } from "@/hooks/useChat";
 import { ConversationList } from "@/app/chat/components/ConversationList";
 import { MessageThread } from "@/app/chat/components/MessageThread";
 import { MessageInput } from "@/app/chat/components/MessageInput";
 import { NewChatModal } from "./components/NewChatModal";
+import { NewGroupModal } from "./components/NewGroupModal";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { MessageSquare, Plus, Wifi, WifiOff, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// TODO: Replace with your real user-store / SWR / React Query lookup
 function useUserDisplay() {
     return (userId: string) => ({
         name: `User ${userId.slice(0, 6)}`,
@@ -23,6 +33,8 @@ export default function ChatPage() {
     const { isConnected } = useSocket(userId || null);
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [showNewChat, setShowNewChat] = useState(false);
+    const [showNewGroup, setShowNewGroup] = useState(false);
+    const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
     const getUserDisplay = useUserDisplay();
 
     const {
@@ -41,7 +53,18 @@ export default function ChatPage() {
         enabled: !!activeConversationId,
     });
 
-    // Guard: if no session yet
+    const handleConversationSelect = (id: string) => {
+        setActiveConversationId(id);
+        setMobileSheetOpen(false);
+    };
+
+    const handleConversationCreated = async (conversationId: string) => {
+        setActiveConversationId(conversationId);
+        setMobileSheetOpen(false);
+        const socket = getSocket();
+        socket?.emit("chat:join-rooms");
+    };
+
     if (!userId) {
         return (
             <div className="flex items-center justify-center h-screen text-muted-foreground text-sm">
@@ -50,107 +73,199 @@ export default function ChatPage() {
         );
     }
 
-    return (
-        <div className="flex h-screen bg-background overflow-hidden">
-            {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-            <aside className="w-80 shrink-0 border-r flex flex-col">
-                <div className="px-4 py-4 border-b flex items-center justify-between">
-                    <h1 className="text-base font-semibold">Messages</h1>
-                    <div className="flex items-center gap-2">
-                        {/* New chat button */}
-                        <button
-                            onClick={() => setShowNewChat(true)}
-                            className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
-                            aria-label="New chat"
-                        >
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                                <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
-                            </svg>
-                        </button>
-                        {/* Online indicator */}
-                        <div className="flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-muted-foreground"}`} />
-                            <span className="text-xs text-muted-foreground">
-                                {isConnected ? "Connected" : "Connecting…"}
-                            </span>
-                        </div>
+    // ── Reusable conversations panel content ──────────────────────────────────
+    const ConversationsPanel = () => (
+        <div className="flex flex-col h-full">
+            {/* Panel header */}
+            <div className="px-3 py-3 flex items-center justify-between shrink-0">
+                <h2 className="text-sm font-semibold tracking-tight">Messages</h2>
+                <TooltipProvider delayDuration={200}>
+                    <div className="flex items-center gap-1">
+                        {/* New group */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7"
+                                    onClick={() => setShowNewGroup(true)}
+                                    aria-label="New group"
+                                >
+                                    <Users className="h-3.5 w-3.5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">New group</TooltipContent>
+                        </Tooltip>
+
+                        {/* New direct chat */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    size="icon"
+                                    variant="default"
+                                    className="h-7 w-7 rounded-full"
+                                    onClick={() => setShowNewChat(true)}
+                                    aria-label="New conversation"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">New chat</TooltipContent>
+                        </Tooltip>
                     </div>
-                </div>
+                </TooltipProvider>
+            </div>
 
-                {/* Modal */}
-                {showNewChat && (
-                    <NewChatModal
-                        onClose={() => setShowNewChat(false)}
-                        onConversationCreated={(conversationId) => {
-                            setActiveConversationId(conversationId);
-                        }}
-                    />
-                )}
+            <Separator />
 
-                <div className="flex-1 overflow-y-auto">
-                    <ConversationList
-                        currentUserId={userId}
-                        activeConversationId={activeConversationId ?? undefined}
-                        onSelect={setActiveConversationId}
-                        getUserDisplay={getUserDisplay}
-                    />
-                </div>
-            </aside>
+            {/* Conversation list */}
+            <div className="flex-1 overflow-y-auto">
+                <ConversationList
+                    currentUserId={userId}
+                    activeConversationId={activeConversationId ?? undefined}
+                    onSelect={handleConversationSelect}
+                    getUserDisplay={getUserDisplay}
+                />
+            </div>
+        </div>
+    );
 
-            {/* ── Main chat area ───────────────────────────────────────────────── */}
-            <main className="flex-1 flex flex-col min-w-0">
-                {activeConversationId ? (
-                    <>
-                        {/* Header */}
-                        <div className="px-4 py-3 border-b shrink-0">
-                            <p className="text-sm font-medium">
-                                {/* TODO: show the other user's name here */}
-                                Conversation
-                            </p>
-                        </div>
+    return (
+        <SidebarProvider
+            style={{
+                "--sidebar-width": "calc(var(--spacing) * 72)",
+                "--header-height": "calc(var(--spacing) * 12)",
+            } as React.CSSProperties}
+        >
+            <AppSidebar variant="inset" />
+            <SidebarInset>
+                {/* ── Site header ───────────────────────────────────────────── */}
+                <SiteHeader />
 
-                        {/* Error banner */}
-                        {error && (
-                            <div className="bg-destructive/10 text-destructive text-xs px-4 py-2 text-center">
-                                {error}
+                {/* ── Chat body ─────────────────────────────────────────────── */}
+                <div className="flex h-full overflow-hidden">
+
+                    {/* ── Desktop conversations aside (md+) ─────────────────── */}
+                    <aside className="hidden md:flex md:w-64 lg:w-72 shrink-0 border-r flex-col">
+                        <ConversationsPanel />
+                    </aside>
+
+                    {/* ── Main area ──────────────────────────────────────────── */}
+                    <main className="flex-1 flex flex-col min-w-0 h-full">
+                        {activeConversationId ? (
+                            <>
+                                {/* Conversation header */}
+                                <div className="px-4 py-3 border-b shrink-0 flex items-center gap-2">
+
+                                    {/* Mobile: open sheet */}
+                                    <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+                                        <SheetTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="md:hidden h-7 w-7 shrink-0"
+                                                aria-label="Show conversations"
+                                            >
+                                                <MessageSquare className="h-4 w-4" />
+                                            </Button>
+                                        </SheetTrigger>
+                                        <SheetContent side="left" className="w-72 p-0">
+                                            <ConversationsPanel />
+                                        </SheetContent>
+                                    </Sheet>
+
+                                    <p className="text-sm font-medium truncate">
+                                        {/* TODO: replace with displayName from conversation */}
+                                        Conversation
+                                    </p>
+                                </div>
+
+                                {/* Error banner */}
+                                {error && (
+                                    <div className="bg-destructive/10 text-destructive text-xs px-4 py-2 text-center shrink-0">
+                                        {error}
+                                    </div>
+                                )}
+
+                                {/* Messages */}
+                                <div className="flex-1 overflow-hidden">
+                                    <MessageThread
+                                        messages={messages}
+                                        currentUserId={userId}
+                                        isLoading={isLoading}
+                                        hasMore={hasMore}
+                                        typingUserIds={typingUserIds}
+                                        onLoadMore={loadMore}
+                                    />
+                                </div>
+
+                                {/* Input */}
+                                <div className="shrink-0">
+                                    <MessageInput
+                                        onSend={sendMessage}
+                                        onTyping={notifyTyping}
+                                        isSending={isSending}
+                                        disabled={!isConnected}
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            /* ── Empty state ─────────────────────────────────── */
+                            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground px-6">
+                                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                                    <MessageSquare className="h-6 w-6 opacity-40" />
+                                </div>
+                                <div className="text-center space-y-1">
+                                    <p className="text-sm font-medium text-foreground">
+                                        No conversation selected
+                                    </p>
+                                    <p className="text-xs">
+                                        Choose one from the list or start a new one
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-center gap-2">
+                                    {/* Mobile only: open sheet */}
+                                    <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+                                        <SheetTrigger asChild>
+                                            <Button variant="outline" size="sm" className="md:hidden">
+                                                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                                                View conversations
+                                            </Button>
+                                        </SheetTrigger>
+                                        <SheetContent side="left" className="w-72 p-0">
+                                            <ConversationsPanel />
+                                        </SheetContent>
+                                    </Sheet>
+
+                                    <Button size="sm" variant="outline" onClick={() => setShowNewGroup(true)}>
+                                        <Users className="h-3.5 w-3.5 mr-1.5" />
+                                        New group
+                                    </Button>
+
+                                    <Button size="sm" onClick={() => setShowNewChat(true)}>
+                                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                        Start a chat
+                                    </Button>
+                                </div>
                             </div>
                         )}
+                    </main>
+                </div>
+            </SidebarInset>
 
-                        {/* Messages */}
-                        <MessageThread
-                            messages={messages}
-                            currentUserId={userId}
-                            isLoading={isLoading}
-                            hasMore={hasMore}
-                            typingUserIds={typingUserIds}
-                            onLoadMore={loadMore}
-                        />
-
-                        {/* Input */}
-                        <MessageInput
-                            onSend={sendMessage}
-                            onTyping={notifyTyping}
-                            isSending={isSending}
-                            disabled={!isConnected}
-                        />
-                    </>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                        <svg
-                            width="40"
-                            height="40"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            opacity="0.4"
-                        >
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
-                        <p className="text-sm">Select a conversation to start chatting</p>
-                    </div>
-                )}
-            </main>
-        </div>
+            {/* ── Modals (outside SidebarInset to avoid stacking context issues) ── */}
+            {showNewChat && (
+                <NewChatModal
+                    onClose={() => setShowNewChat(false)}
+                    onConversationCreated={handleConversationCreated}
+                />
+            )}
+            {showNewGroup && (
+                <NewGroupModal
+                    onClose={() => setShowNewGroup(false)}
+                    onGroupCreated={handleConversationCreated}
+                />
+            )}
+        </SidebarProvider>
     );
 }

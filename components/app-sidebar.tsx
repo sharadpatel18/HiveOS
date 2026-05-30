@@ -18,6 +18,7 @@ import {
   IconClipboardList,
   IconLayoutDashboard,
   IconChartPie,
+  IconMessage,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -230,6 +231,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ]
     : []
 
+  const navChat = [
+    {
+      title: "Chat",
+      url: "/chat",
+      icon: IconMessage,
+      isActive: activeKey === "chat",
+      onClick: () => setActiveKey("chat"),
+    },
+  ]
 
   // ── Secondary nav ─────────────────────────────────────────────────────────
   const navSecondary = [
@@ -316,6 +326,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <Badge variant="outline" className="text-[10px] h-4 px-1.5 shrink-0">
                       Active
                     </Badge>
+                  </span>
+                }
+              />
+            )}
+
+            {/* Section 3 — Chat */}
+            {navChat.length > 0 && (
+              <NavMain
+                items={navChat}
+                label={
+                  <span className="flex items-center justify-between gap-2 w-full pr-1">
+                    <span>Chat</span>
                   </span>
                 }
               />

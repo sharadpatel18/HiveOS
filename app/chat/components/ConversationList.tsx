@@ -5,12 +5,19 @@ import { getSocket } from "@/hooks/useSocket";
 
 interface ConversationPreview {
     id: string;
+    type: "direct" | "group";
+    name: string | null;          // group chat name from DB
+    displayName: string;          // computed: other user's name OR group name
+    initials: string;             // computed: for avatar
     lastMessage: { content: string; createdAt: string; senderId: string } | null;
     unreadCount: number;
-    otherMemberIds: string[];
-    // Enrich with user info from your users table / user store
-    otherUserName?: string;
-    otherUserAvatar?: string;
+    otherMembers: {
+        userId: string;
+        name: string;
+        email: string;
+    }[];
+    // keep this if anything else in your app still references it
+    otherMemberIds?: string[];
 }
 
 interface ConversationListProps {
@@ -52,8 +59,17 @@ export function ConversationList({
         if (!socket) return;
 
         const onNewMessage = (payload: { message: any }) => {
-            setConversations((prev) =>
-                prev
+            setConversations((prev) => {
+                // check if conversation already exists in list
+                const exists = prev.find(c => c.id === payload.message.conversationId);
+
+                // if not exists → fetch fresh list to get the new conversation
+                if (!exists) {
+                    loadConversations(); // ← re-fetch to get new conversation
+                    return prev;
+                }
+
+                return prev
                     .map((c) =>
                         c.id === payload.message.conversationId
                             ? {
@@ -70,11 +86,12 @@ export function ConversationList({
                         const aTime = a.lastMessage?.createdAt ?? "";
                         const bTime = b.lastMessage?.createdAt ?? "";
                         return bTime.localeCompare(aTime);
-                    })
-            );
+                    });
+            });
         };
 
-        const onNewConversation = () => loadConversations();
+        const onNewConversation = () => loadConversations(); // ← re-fetch full list
+
         const onReadReceipt = (payload: { conversationId: string; userId: string }) => {
             if (payload.userId === currentUserId) {
                 setConversations((prev) =>
@@ -124,8 +141,11 @@ export function ConversationList({
     return (
         <ul className="divide-y divide-border">
             {conversations.map((conv) => {
-                const otherId = conv.otherMemberIds[0];
-                const user = otherId ? getUserDisplay(otherId) : { name: "Unknown" };
+                // After — use new shape from API
+                const otherMember = conv.otherMembers?.[0];
+                const user = {
+                    name: conv.displayName ?? otherMember?.name ?? "Unknown",
+                };
                 const isActive = conv.id === activeConversationId;
                 const lastMsgText = conv.lastMessage
                     ? conv.lastMessage.senderId === currentUserId

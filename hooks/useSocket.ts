@@ -14,6 +14,7 @@ export function useSocket(userId: string | null) {
       socket = io(process.env.NEXT_PUBLIC_APP_URL ?? "", {
         path: "/api/socket",
         auth: { userId },
+        transports: ["websocket"],
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: 5,
