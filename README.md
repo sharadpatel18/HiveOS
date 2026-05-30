@@ -1,4 +1,4 @@
-# Interviewer
+# HiveOS
 
 This is a Next.js application for company management, hiring workflows, and role-based access control.
 
